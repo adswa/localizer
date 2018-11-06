@@ -1,0 +1,3 @@
+[submodule "studyforrest-data-phase2"]
+	path = studyforrest-data-phase2
+	url = git@github.com:psychoinformatics-de/studyforrest-data-phase2.git
