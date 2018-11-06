@@ -4,3 +4,6 @@
 [submodule "studyforrest-data-aligned"]
 	path = studyforrest-data-aligned
 	url = /home/nastase/movieloc/data/studyforrest/studyforrest-data-aligned/
+[submodule "studyforrest-data-templatetransforms"]
+	path = studyforrest-data-templatetransforms
+	url = git@github.com:psychoinformatics-de/studyforrest-data-templatetransforms.git
