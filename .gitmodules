@@ -7,3 +7,6 @@
 [submodule "studyforrest-data-templatetransforms"]
 	path = studyforrest-data-templatetransforms
 	url = git@github.com:psychoinformatics-de/studyforrest-data-templatetransforms.git
+[submodule "studyforrest-data-visualrois"]
+	path = studyforrest-data-visualrois
+	url = git@github.com:psychoinformatics-de/studyforrest-data-visualrois.git
