@@ -32,7 +32,7 @@ for participant in participants:
 			output_fn = output_dir + roi_dir + input_fn.split('/')[-1].split('.')[0] + '_tmpl.nii.gz' 
 		#save tmpl.bold files in data_dir
 		else:
-			output_fn = output_dir + input_fn.split('/')[-1].split('.')[0] + '_tmpl.nii.gz'
+			output_fn = output_dir + data_dir + input_fn.split('/')[-1].split('.')[0] + '_tmpl.nii.gz'
 	
 		fsl_cmd = ("fsl5.0-applywarp -i {0} -o {1} -r {2} -w {3} --interp={4}".format(
                 input_fn, output_fn, reference_fn, warp_fn, interpolation))
