@@ -1009,7 +1009,7 @@ if __name__ == '__main__':
                             session_id=args.session_id,
                             task_id=args.task_id)
     pre.base_dir=work_dir
-    pre.run(plugin='MultiProc', plugin_args={'n_procs':7})
+    pre.run(plugin='MultiProc')
 
     if args.preproc==False:
         firstlevel = runfirst_forrest(json_desc=json_desc,
