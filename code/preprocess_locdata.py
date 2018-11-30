@@ -883,7 +883,7 @@ def preprocess_loc(experiment_dir,
 
 
     templates = {#'anat':'inputs/tnt/{subject_id}/t1w/brain.nii.gz',
-                 'func':'{subject_id}/{session_id}/func/sub-*_ses-localizer_task-objectcategories_{run_id}_bold.nii.gz'}
+                 'func':'studyforrest-data-visualrois/src/phase2/{subject_id}/{session_id}/func/sub-*_ses-localizer_task-objectcategories_{run_id}_bold.nii.gz'}
 #here: studyforrest-data-visualrois/src/phase2
 
     sf = pe.Node(SelectFiles(templates),
@@ -1009,7 +1009,7 @@ if __name__ == '__main__':
                             session_id=args.session_id,
                             task_id=args.task_id)
     pre.base_dir=work_dir
-    #pre.run(plugin='MultiProc', plugin_args={'n_procs':7})
+    pre.run(plugin='MultiProc', plugin_args={'n_procs':7})
 
     if args.preproc==False:
         firstlevel = runfirst_forrest(json_desc=json_desc,
