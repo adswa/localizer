@@ -3,4 +3,4 @@
 [datalad "containers.BIDSSacc"]
 	updateurl = shub://AdinaWagner/BIDSsacc:1.1
 	image = .datalad/environments/BIDSSacc/image
-	cmdexec = singularity exec {img} {cmd}
+	cmdexec = singularity run {img} {cmd}
