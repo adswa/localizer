@@ -1,2 +1,6 @@
 [datalad "dataset"]
 	id = 63490716-e1fb-11e8-8fe5-003048ce7f90
+[datalad "containers.BIDSSacc"]
+	updateurl = shub://AdinaWagner/BIDSsacc:1.1
+	image = .datalad/environments/BIDSSacc/image
+	cmdexec = singularity exec {img} {cmd}
