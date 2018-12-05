@@ -13,6 +13,8 @@ It should do:
 - spatial smoothing: 4mm
 - highpass filter: cutoff 100
 - slice time correction (fsls "1: regular up" option) (--> do that with nipype.interfaces.fsl.SliceTimer
+--> update: no slice time correction anymore
+
 """
 
 
@@ -743,8 +745,8 @@ def preprocess_loc(experiment_dir,
                   name='datasink')
     datasink.inputs.base_directory = experiment_dir
 
-    Slicer = pe.Node(fsl.SliceTimer(),
-                    name='Slicer')
+    #Slicer = pe.Node(fsl.SliceTimer(),
+    #                name='Slicer')
 
 
     def get_preproc_subs(subject_id, session_id, task_id, run_id):
@@ -796,9 +798,10 @@ def preprocess_loc(experiment_dir,
                                                 ('session_id', 'session_id'),
                                                 ('task_id', 'task_id'),
                                                 ('run_id', 'run_id')]),
-                        (sf, Slicer, [('func', 'in_file')]),
-                        (Slicer, preproc,
-                        [('slice_time_corrected_file', 'inputspec.func')]),
+#                        (sf, Slicer, [('func', 'in_file')]),
+#                        (Slicer, preproc,
+#                        [('slice_time_corrected_file', 'inputspec.func')]),
+			(sf, preproc, [('func', 'inputspec.func')]),
                         (subsgenpreproc, datasink, [('substitutions',
                                                 'substitutions')]),
                         (preproc, datasink, [('outputspec.smoothed_files',
