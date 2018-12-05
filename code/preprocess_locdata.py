@@ -753,11 +753,12 @@ def preprocess_loc(experiment_dir,
         subs = [('_subject_id_{}_'.format(subject_id), '')]
         subs.append(('task_id_{}'.format(task_id), ''))
         subs.append(('_run_id_{}'.format(run_id), ''))
-       # subs.append(('_session_id_{}'.format(session_id), ''))
+        subs.append(('_session_id_{}'.format(session_id), ''))
         subs.append(('_addmean0', ''))
         subs.append(('_dilatemask0', ''))
         subs.append(('_maskfunc30', ''))
         subs.append(('_meanfunc30', ''))
+	subs.append(('task-objectcategories', 'ses-localizer_task-objectcategories'))
         subs.append(('bold_dtype_bet_thresh_dil', 'space-custom-subject_type-brain_mask'))
         subs.append(('bold_dtype_mask_smooth_mask_gms', 'space-custom-subject_desc-mean'))
         subs.append(('bold_dtype_mask_smooth_mask', 'space-custom-subject_desc-smooth'))
