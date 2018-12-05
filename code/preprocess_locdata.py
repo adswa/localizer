@@ -753,7 +753,7 @@ def preprocess_loc(experiment_dir,
         subs = [('_subject_id_{}_'.format(subject_id), '')]
         subs.append(('task_id_{}'.format(task_id), ''))
         subs.append(('_run_id_{}'.format(run_id), ''))
-        subs.append(('_session_id_{}'.format(session_id), ''))
+       # subs.append(('_session_id_{}'.format(session_id), ''))
         subs.append(('_addmean0', ''))
         subs.append(('_dilatemask0', ''))
         subs.append(('_maskfunc30', ''))
