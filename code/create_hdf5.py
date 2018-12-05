@@ -1,5 +1,14 @@
 #!/usr/bin/python
 
+###################
+#
+# TODO: this script will break - have changed sub-* dirs to
+# contain ses-* dirs as well. Insert ses-movie where necessary
+# at one point to fix!
+#
+###################
+
+
 import numpy as np
 import mvpa2.suite as mv
 from glob import glob
