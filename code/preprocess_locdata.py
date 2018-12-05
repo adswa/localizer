@@ -758,7 +758,6 @@ def preprocess_loc(experiment_dir,
         subs.append(('_dilatemask0', ''))
         subs.append(('_maskfunc30', ''))
         subs.append(('_meanfunc30', ''))
-	subs.append(('task-objectcategories', 'ses-localizer_task-objectcategories'))
         subs.append(('bold_dtype_bet_thresh_dil', 'space-custom-subject_type-brain_mask'))
         subs.append(('bold_dtype_mask_smooth_mask_gms', 'space-custom-subject_desc-mean'))
         subs.append(('bold_dtype_mask_smooth_mask', 'space-custom-subject_desc-smooth'))
