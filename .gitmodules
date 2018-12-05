@@ -1,12 +1,12 @@
 [submodule "studyforrest-data-phase2"]
-	path = studyforrest-data-phase2
+	path = sourcedata/phase2
 	url = git@github.com:psychoinformatics-de/studyforrest-data-phase2.git
 [submodule "studyforrest-data-aligned"]
-	path = studyforrest-data-aligned
+	path = sourcedata/aligned
 	url = /home/nastase/movieloc/data/studyforrest/studyforrest-data-aligned/
 [submodule "studyforrest-data-templatetransforms"]
-	path = studyforrest-data-templatetransforms
+	path = sourcedata/tnt
 	url = git@github.com:psychoinformatics-de/studyforrest-data-templatetransforms.git
 [submodule "studyforrest-data-visualrois"]
-	path = studyforrest-data-visualrois
+	path = sourcedata/visualrois
 	url = git@github.com:psychoinformatics-de/studyforrest-data-visualrois.git
