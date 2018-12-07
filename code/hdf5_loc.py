@@ -267,7 +267,6 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
             assert events['trial_type'][i] == d['trial_type'][i]
 
     # account for more variance by coding the first occurance
-    print('starting analysis of {}.'.format(participant))
     i = 1
     while i < len(events):
         if i == 1:
