@@ -262,8 +262,8 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
         d = np.genfromtxt(filename, delimiter='\t', names=True, dtype=[('onset',float), ('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')])
         for i in range(0, len(d)):
             import numpy.testing as npt
-            npt.assert_almost_equal(events['onset'][i], d['onset'][i])
-            npt.assert_almost_equal(events['duration'][i], d['duration'][i])
+            npt.assert_almost_equal(events['onset'][i], d['onset'][i], decimal = 0)
+            npt.assert_almost_equal(events['duration'][i], d['duration'][i], decimal = 0)
             assert events['trial_type'][i] == d['trial_type'][i]
 
     # account for more variance by coding the first occurance
@@ -307,11 +307,13 @@ if __name__ == '__main__':
 
     if os.path.isfile(groupdata):
         ds = mv.h5load(groupdata)
+	print('loaded already existing transposed group data')
     else:
         ds = buildthisshit()
 
     if os.path.isfile(sensdata):
         sensitivities = mv.h5load(sensdata)
+	print('loaded already existing sensitivities')
     else:
  	sensitivities = dothefuckingclassification(ds)
     hrf_estimates = dothefuckingglm(sensitivities)
