@@ -43,7 +43,10 @@ datafiles were preprocessed (smoothing, brain extraction, high-pass filtering).
 ########
 # step 1:
 # lets get the data, and build the full dataset
-def runthisshit(roi_pairs):
+def buildthisshit():
+    """buildthisshit() will build and save participant-specific hdf5 datasets
+    with all rois from preprocessed objectcategories data, stack them for a
+    group dataset and save them, and transpose the group dataset and save it."""
 
     participants = sorted([path.split('/')[-1] for path in glob(basedir + 'sub-*')])
     rois = ['FFA', 'OFA', 'PPA', 'EBA', 'LOC', 'VIS']
@@ -166,6 +169,8 @@ def runthisshit(roi_pairs):
 
     # save full dataset
     mv.h5save(basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass.hdf5', movie_dss)
+    print('saved the collection of all subjects datasets as {}.'.format(basedir +
+    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass.hdf5'))
 
     # squish everything together
     ds_wide = mv.hstack(movie_dss)
@@ -173,24 +178,30 @@ def runthisshit(roi_pairs):
     # transpose the dataset, time points are now features
     ds = mv.Dataset(ds_wide.samples.T, sa=ds_wide.fa.copy(), fa=ds_wide.sa.copy())
     mv.h5save(basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5', ds)
+    print('Transposed the group-dataset and saved it as {}.'.format(basedir +
+    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'))
+    return ds
 
 
-    #########
-    # step 2:
-    # we have a dataset, lets start the classification
+def dothefuckingclassification(ds):
+    """ Dothefuckingclassification does the fucking classification. It builds a
+    linear gaussian naive bayes classifier, performs a leave-one-out
+    crossvalidation and stores the sensitivities from the GNB classifier of each
+    fold in a combined dataset for further use in a glm."""
+    # set up classifier
     prior='ratio'
     targets= 'all_ROIs'
     gnb = mv.GNB(common_variance=True, prior=prior, space=targets)
 
-    # prepare for sensitivity extraction within CrossValidation
-    # how can I be sure which participant was used?
+    # prepare for callback of sensitivity extraction within CrossValidation
     sensitivities=[]
     def store_sens(data, node, result):
         sens = node.measure.get_sensitivity_analyzer(force_train=False)(data)
         # we also need to manually append the time attributes to the sens ds
         sens.fa['time_coords']=data.fa['time_coords']
-        # and maybe run information? partipant?
         sens.fa['chunks']=data.fa['chunks']
+        print('Storing sensitivity for data on participants %s' %
+            str(data.sa['participant'].unique))
         sensitivities.append(sens)
 
     # do a crossvalidation classification
@@ -200,195 +211,100 @@ def runthisshit(roi_pairs):
                             callback=store_sens)
     results = cv(ds)
     # save classification results
-    with open('/data/movieloc/backup_store/gnb_cv_results/objectcategory_clf.txt', 'a') as f:
-        f.write(cv.ca.stats.as_string(description=True))
+#    with open('/data/movieloc/backup_store/gnb_cv_results/objectcategory_clf.txt', 'a') as f:
+#        f.write(cv.ca.stats.as_string(description=True))
     #save the results dataset
-    mv.h5save(basedir + '/gnb_cv_results/' + 'gnb_classification_results', results)
+    mv.h5save(basedir + 'gnb_cv_classification_results.hdf5', results)
+    print('Saved the crossvalidation results at {}.'.format(basedir +
+    'gnb_cv_classification_results.hdf5'))
     # results now has the overall accuracy. results.samples gives the
     # accuracy per participant.
     # sensitivities contains a dataset for each participant with the
     # sensitivities as samples and class-pairings as attributes
+    return sensitivities
 
     ########
     # step 3:
     # get event files. they're located in sourcedata/phase2/sub-*/ses-localizer/func/sub*_ses-localizer_task-objectcategories_run*_events.tsv
     # TODO: move event files into subs ses-localizer dir
 
-    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
-    for sub in range(0, len(participants)):
-        participant = participants[sub]
-        event_files = sorted(glob(basedir + '/sourcedata/phase2/{}/ses-localizer/func/sub-*_ses-localizer_task-objectcategories_run-*_events.tsv'.format(participant)))
-        assert len(event_files)==4
-        #make them more detailed
-        print('starting analysis of {}.'.format(participant))
-        for event_file in sorted(event_files):
-            data = np.genfromtxt(event_file, dtype=[('onset',float), ('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')], 
-                                 delimiter='\t', names=True)
-            # simplify data
-            i = 1
-            while i < len(data):
-                if i == 1:
-                    data[i-1]['trial_type'] = data[i-1]['trial_type'] + '_first'
-                    i += 1
-                if data[i-1]['trial_type'] != data[i]['trial_type']:
-                    data[i]['trial_type'] = data[i]['trial_type'] + '_first'
-                    i += 2
-                else:
-                    i += 1
-            # get events into dictionary
-            dicts = []
-            for i in range(0, len(data)):
-                dic = {'onset':data[i][0], 'duration':data[i][1], 'condition':data[i][2]}
-                dicts.append(dic)
-            #this should contain events for all four runs
-        ds = sensitivities[sub]
-        import itertools
-        for pair in itertools.combinations(roi_pairs, 2):
-                                        ##    ['left FFA', 'left PPA', 'right FFA',
-                                        ##    'right PPA'], 2):
-                                        #    'left EBA', 'left FFA', 'left LOC',
-                                        #    'left OFA', 'left PPA', 'right EBA',
-                                        #    'right FFA', 'right LOC', 'right OFA',
-                                        #    'right PPA', 'VIS'], 2):
-            t1=pair[0]
-            t2=pair[1]
-            for i in range(0, len(ds.sa.all_ROIs)):
-                if (t1 in ds.sa.all_ROIs[i]) and (t2 in ds.sa.all_ROIs[i]):
-                    row_idx = i
-            y = ds[row_idx] # check whether this selection works
-            t_1 = t1.split(' ')
-            t_2 = t2.split(' ')
-            names = t_1 + t_2
-            model_name='-'.join(names)
-            # transpose dataset because fit_event_hrf_model expects time_coords as
-            # sample attributes
-            y_T = mv.Dataset(y.samples.T, sa = y.fa.copy(), fa=y.sa.copy())
-            hrf_estimates = mv.fit_event_hrf_model(y_T,
-                                                   dicts,
-                                                   time_attr='time_coords',
-                                                   condition_attr='condition',
-                                                   design_kwargs=dict(drift_model='blank'),
-                                                   glmfit_kwargs=dict(model='ols'),
-                                                   return_model=True)
+def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
+    """dothefuckingglm does the fucking glm. It will squish the sensitivity
+    dataset by vstacking them, calculating the mean sensitivity per ROI pair
+    with the mean_group_sample() function, transpose it with a
+    TransposeMapper(). It will get the event files and read them in, average the
+    durations because there are tiny differences between subjects, and then it
+    will put all of that into a glm.
+    """
+    sensitivities_stacked = mv.vstack(sensitivities)
+    sensitivities_stacked.sa['all_ROIs_str'] = map(lambda p: '_'.join(p),
+                                            sensitivities_stacked.sa.all_ROIs)
+    mean_sens = mv.mean_group_sample(['all_ROIs_str'])(sensitivities_stacked)
+    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    # average onsets into one event file
+    event_files = sorted(glob(basedir + '/sourcedata/phase2/*/ses-localizer/func/sub-*_ses-localizer_task-objectcategories_run-*_events.tsv'))
+    vals = None
+    for idx, filename in enumerate(event_files, 1):
+        data = np.genfromtxt(filename, dtype=None, delimiter='\t', skip_header=1,
+        usecols=(0,))
+        if vals is None:
+            vals = data
+        else:
+            vals += data
+    meanvals = vals / idx
+    events = np.genfromtxt(filename, delimiter='\t', names=True, dtype=[('onset',float),('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')])
+    for row, val in itertools.izip(events, meanvals):
+        row['onset']=val
+    for filename in event_files:
+        d = np.genfromtxt(filename, delimiter='\t', names=True, dtype=[('onset',float), ('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')])
+        for i in range(0, len(d)):
+            import numpy.testing as npt
+            npt.assert_almost_equal(events['onset'][i], d['onset'][i])
+            npt.assert_almost_equal(events['duration'][i], d['duration'][i])
+            assert events['trial_type'][i] == d['trial_type'][i]
 
-            print('calculated glm for {}, saving results...'.format(participant))
-            #save results under model_name at some point
-            mv.h5save('/data/movieloc/backup_store/gnb_cv_results/{}-{}'.format(participant, model_name), hrf_estimates)
-    print('I am done')
+    # account for more variance by coding the first occurance
+    print('starting analysis of {}.'.format(participant))
+    i = 1
+    while i < len(events):
+        if i == 1:
+            events[i-1]['trial_type'] = events[i-1]['trial_type'] + '_first'
+            i += 1
+        if events[i-1]['trial_type'] != events[i]['trial_type']:
+            events[i]['trial_type'] = events[i]['trial_type'] + '_first'
+            i += 2
+        else:
+            i += 1
+    # get events into dictionary
+    dicts = []
+    for i in range(0, len(events)):
+        dic = {'onset':events[i][0], 'duration':events[i][1], 'condition':events[i][2]}
+        dicts.append(dic)
 
-
-
-    # ## CODE TO CALCULATE ONE GLM PER RUN
-    #
-    # for sub in range(0, len(participants)):
-    #     participant = participants[sub]
-    #     event_files = sorted(glob(basedir +
-    #                         '/sourcedata/phase2/{}/ses-localizer/func/sub-*_ses-localizer_task-objectcategories_run-*_events.tsv'.format(participant)))
-    #     assert len(event_files)==4
-    #     #make them more detailed
-    #     print('starting analysis of {}.'.format(participant))
-    #     for event_file in sorted(event_files):
-    #         data = np.genfromtxt(event_file, dtype=[('onset',float), ('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')], 
-    #                              delimiter='\t', names=True)
-    #         # simplify data
-    #         i = 1
-    #         while i < len(data):
-    #             if i == 1:
-    #                 data[i-1]['trial_type'] = data[i-1]['trial_type'] + '_first'
-    #                 i += 1
-    #             if data[i-1]['trial_type'] != data[i]['trial_type']:
-    #                 data[i]['trial_type'] = data[i]['trial_type'] + '_first'
-    #                 i += 2
-    #             else:
-    #                 i += 1
-    #         # get events into dictionary
-    #         dicts = []
-    #         for i in range(0, len(data)):
-    #             dic = {'onset':data[i][0], 'duration':data[i][1], 'condition':data[i][2]}
-    #             dicts.append(dic)
-    #
-    #         #run a glm. events files are now per run.
-    #         # I need to get the sensitivities for a specific class decision (i.e. right
-    #         # FFA versus right PPA) (thats one row in the ds.samples) for the time
-    #         # points of one particular run.
-    #
-    #         # get the dataset for the participant
-    #         ds = sensitivities[sub]
-    #         # get index of the relevant targets
-    #
-    #         # to get indices per run
-    # #        for run in np.unique(ds.fa.chunks)
-    # #           run_idx = np.where(ds.fa.chunks == run)[0]
-    #         # get all pairwise roi decisions
-    #         import itertools
-    #         for pair in itertools.combinations(['left EBA', 'left FFA', 'left LOC',
-    #                                             'left OFA', 'left PPA', 'right EBA',
-    #                                             'right FFA', 'right LOC', 'right OFA',
-    #                                             'right PPA', 'VIS'], 2):
-    #             t1=pair[0]
-    #             t2=pair[1]
-    #             for i in range(0, len(ds.sa.all_ROIs)):
-    #                 if (t1 in ds.sa.all_ROIs[i]) and (t2 in ds.sa.all_ROIs[i]):
-    #                     row_idx = i
-    #                 for j in range(0, 4):
-    #                     col_idx = np.where(ds.fa.chunks==j)[0]
-    #                     y = ds[row_idx, col_idx]
-    #                     t_1 = t1.split(' ')
-    #                     t_2 = t2.split(' ')
-    #                     names = t_1 + t_2
-    #                     names.append('_run')
-    #                     names.append(str(j+1))
-    #                     model_name='-'.join(names)
-    #                     # problem: fit_event_hrf_model expects time coordinates to
-    #                     # be a sample attribute, here however they are a feature
-    #                     # attribute. maybe retranspose the dataset?
-    #                     y_T = mv.Dataset(y.samples.T, sa = y.fa.copy(),
-    #                                         fa=y.sa.copy())
-    #                     hrf_estimates = mv.fit_event_hrf_model(y_T,
-    #                                                     dicts,
-    #                                                     time_attr='time_coords',
-    #                                                     condition_attr='condition',
-    #                                                     design_kwargs=dict(drift_model='blank'),
-    #                                                     glmfit_kwargs=dict(model='ols'),
-    #                                                     return_model=True)
-    #
-    #                     print('calculated glm for {}, saving results...'.format(participant))
-    #                     #save results under model_name at some point
-    #                     mv.h5save('/data/movieloc/backup_store/gnb_cv_results/{}-{}'.format(participant, model_name), hrf_estimates)
-    #
-
-
+    hrf_estimates = mv.fit_event_hrf_model(mean_sens_transposed,
+                                            dicts,
+                                            time_attr='time_coords',
+                                            condition_attr='condition',
+                                            design_kwargs=dict(drift_model='blank'),
+                                            glmfit_kwargs=dict(model='ols'),
+                                            return_model=True)
+    mv.h5save(basedir + 'sens_glm_objectcategories_results', hrf_estimates)
+    print('calculated glm, saving results at {}.'.format(basedir +
+    'sens_glm_objectcategories_results'))
+    print('I am done with this bloody glm')
+    return hrf_estimates
 
 
 if __name__ == '__main__':
-    import argparse
+    import os.path
+    # check whether data for subjects exists already, so that we can skip
+    # buildthisshit()
+    groupdata= basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'
+    if os.path.isfile(groupdata):
+        ds = mv.h5load(groupdata)
+    else:
+        ds = buildthisshit()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--roi', nargs='+', #action = 'append',
-                        help = 'which rois to make comparisons \
-                        between. Build a list with all of the rois you want \
-                        included. Chose from left FFA, right FFA, left EBA, \
-                        right EBA, left LOC, right LOC, left OFA, right OFA, \
-                        left PPA, right PPA, VIS. Specify as strings in a list')
-
-    args = parser.parse_args()
-
-#    if (type(args.roi)==list) and (len(args.roi) > 1):
-#        roi_pairs = args.roi
-#    else:
-#        print('rois should be specified as a list of minimum length 2 \
-#               however, I was given {} as input for --roi. Will be \
-#               using all possible pairs of rois instead'.format(args.roi))
-#        roi_pairs = ['left FFA', 'left EBA', 'left LOC', 'left OFA',
-#                    'left PPA', 'right EBA', 'right FFA', 'right LOC', 'right OFA',
-#                    'right PPA', 'VIS']
-    #else:
-    #    roi_pairs = ['left FFA', 'left EBA', 'left LOC', 'left OFA',
-    #                 'left PPA', 'right EBA', 'right FFA', 'right LOC', 'right OFA',
-    #                 'right PPA', 'VIS']
-    roi_pairs = args.roi
-
-    print(roi_pairs)
-    runthisshit(roi_pairs)
-
+    sensitivities = dothefuckingclassification(ds)
+    hrf_estimates = dothefuckingglm(sensitivities)
 
