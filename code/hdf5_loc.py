@@ -15,7 +15,7 @@ from sklearn.metrics import (cohen_kappa_score,
                             recall_score)
 from sklearn.grid_search import GridSearchCV
 from nilearn.signal import clean
-
+import itertools
 
 basedir='/data/movieloc/backup_store/saccs/'
 locdir='/ses-localizer/'
@@ -217,6 +217,9 @@ def dothefuckingclassification(ds):
     mv.h5save(basedir + 'gnb_cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results at {}.'.format(basedir +
     'gnb_cv_classification_results.hdf5'))
+    mv.h5save(basedir + 'sensitivities_nfold.hdf5', sensitivities)
+    print('Saved the sensitivities at {}.'.format(basedir +
+    'sensitivities_nfold.hdf5'))
     # results now has the overall accuracy. results.samples gives the
     # accuracy per participant.
     # sensitivities contains a dataset for each participant with the
@@ -300,11 +303,16 @@ if __name__ == '__main__':
     # check whether data for subjects exists already, so that we can skip
     # buildthisshit()
     groupdata= basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'
+    sensdata = basedir + 'sensitivities_nfold.hdf5'
+
     if os.path.isfile(groupdata):
         ds = mv.h5load(groupdata)
     else:
         ds = buildthisshit()
 
-    sensitivities = dothefuckingclassification(ds)
+    if os.path.isfile(sensdata):
+        sensitivities = mv.h5load(sensdata)
+    else:
+ 	sensitivities = dothefuckingclassification(ds)
     hrf_estimates = dothefuckingglm(sensitivities)
 
