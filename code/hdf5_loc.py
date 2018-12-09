@@ -14,7 +14,7 @@ from sklearn.metrics import (cohen_kappa_score,
                             confusion_matrix,
                             recall_score)
 from sklearn.grid_search import GridSearchCV
-from nilearn.signal import clean
+#from nilearn.signal import clean
 import itertools
 
 basedir='/data/movieloc/backup_store/saccs/'
