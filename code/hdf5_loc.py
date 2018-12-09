@@ -1,4 +1,6 @@
-#!/usr/bin/python
+#!/home/adina/wtf/bin/python
+# i think shebang was the culprit
+# # !/usr/bin/python
 
 
 import numpy as np
@@ -290,9 +292,9 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
                                             design_kwargs=dict(drift_model='blank'),
                                             glmfit_kwargs=dict(model='ols'),
                                             return_model=True)
-    mv.h5save(basedir + 'sens_glm_objectcategories_results', hrf_estimates)
+    mv.h5save(basedir + 'sens_glm_objectcategories_results.hdf5', hrf_estimates)
     print('calculated glm, saving results at {}.'.format(basedir +
-    'sens_glm_objectcategories_results'))
+    'sens_glm_objectcategories_results.hdf5'))
     print('I am done with this bloody glm')
     return hrf_estimates
 
