@@ -304,6 +304,64 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
     return hrf_estimates
 
 
+
+
+#### the last thing to do is to plot this
+#def makeaplot(events, mean_sens_transposed, hrf_estimates, roi_pair):
+#    """
+#    roi_pair: ['left FFA', 'left PPA']
+#    """
+#    # some parameters
+#    # get the conditions
+#    block_design = np.unique(events['trial_type'])
+#    # end indices to chunk timeseries into runs
+#    run_startidx= np.array([0, 157, 313, 469])
+#    run_endidx = np.array([156, 312, 468, 624])
+#    # more complex block design?
+#    runs = np.unique(mean_sens_transposed.sa.chunks)
+#    time_coords = mean_sens_transposed.sa.time_coords
+#
+#        # plot sensitivity timecourse of particular comparison from one fold:
+#    for run in runs:
+#         # get a selection of matplotlib colors
+#        colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32','#27ae60',
+#        '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
+#        fig, ax = plt.subplots(1, 1, figsize=[18, 10])
+#        plt.title('Timecourse of sensitivities, {} versus {}, run {}'.format(roi_pair[0], roi_pair[1], run+1))
+#        plt.xlim([0, 350])
+#        plt.xlabel('Time in sec')
+#        plt.legend()
+#        for stimulus in block_design:
+#            # get design information from the event file
+#            onsets = events[events['trial_type']==stimulus]['onset'] # stimulus start
+#            durations = events[events['trial_type']==stimulus]['duration']
+#            stimulation_end = np.sum([onsets, durations], axis=0) # stimulus end
+#            # I want the duration of the stimulation color filled
+#            for i in range(0, len(onsets)):
+#                ax.axvspan(onsets[i], stimulation_end[i], color=colors[0],
+#                alpha=0.5, label = "_"*i + stimulus)
+#            del colors[0]
+#            ax.legend()
+#        colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32','#27ae60',
+#        '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
+#        for i in range(len(sensitivities[0])):
+#            comparison = (sens[0][i].sa.items()[0][1].value[0])
+#            if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
+#                sens_targets = sensitivities[0][i].samples
+#                times = sensitivities[0][i].fa.time_coords[run_startidx[run]:run_endidx[run]]
+#                run_coords = np.array((times, sens_targets[0][run_startidx[run]:run_endidx[run]]))
+#                ax.plot(run_coords[0], run_coords[1], '-', color='black')
+#                # plot glm model results
+#                glm_model=hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], i]
+#                ax2 = ax.twinx()
+#                ax2.plot(times, glm_model, '-', color = '#7b241c', lw=1)
+#                del colors[0]
+#
+#
+#
+
+
+
 if __name__ == '__main__':
     import os.path
     # check whether data for subjects exists already, so that we can skip
