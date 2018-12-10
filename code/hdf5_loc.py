@@ -279,6 +279,11 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
             i += 2
         else:
             i += 1
+    # save the event_file
+    fmt = "%10.3f\t%10.3f\t%16s\t%60s"
+    np.savetxt(basedir + 'group_events.tsv', events, delimiter='\t', comments='', \
+     header='onset\tduration\ttrial_type\tstim_file', fmt=fmt)
+    print('Combined all event files into a group event file at {}.'.format(basedir + 'group_events.tsv'))
     # get events into dictionary
     dicts = []
     for i in range(0, len(events)):
@@ -305,16 +310,19 @@ if __name__ == '__main__':
     # buildthisshit()
     groupdata= basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'
     sensdata = basedir + 'sensitivities_nfold.hdf5'
-
+    ev_file = basedir + 'group_events.tsv'
     if os.path.isfile(groupdata):
         ds = mv.h5load(groupdata)
 	print('loaded already existing transposed group data')
     else:
         ds = buildthisshit()
 
-    if os.path.isfile(sensdata):
+    if (os.path.isfile(sensdata)) and (os.path.isfile(ev_file)):
         sensitivities = mv.h5load(sensdata)
 	print('loaded already existing sensitivities')
+        events = np.genfromtxt(ev_file, names=('onset', 'duration',
+        'trial_type', 'stim_file'), dtype=['<f8', '<f8', '|S18', '|S60'], skip_header=1)
+	print('loaded already existing group eventfile')
     else:
  	sensitivities = dothefuckingclassification(ds)
     hrf_estimates = dothefuckingglm(sensitivities)
