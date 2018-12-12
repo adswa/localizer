@@ -1,6 +1,5 @@
 #!/home/adina/wtf/bin/python
 
-
 #--> mess on hydra currently requires python to be executed from virtual env
 import numpy as np
 import mvpa2.suite as mv
@@ -71,8 +70,87 @@ def get_voxel_coords(ds, append=True, zscore=True):
     return ds_coords
 
 
+# to get a group event file
+def get_group_events():
+    event_files = sorted(glob(basedir + '/sourcedata/phase2/*/ses-localizer/func/sub-*_ses-localizer_task-objectcategories_run-*_events.tsv'))
+    vals = None
+    for idx, filename in enumerate(event_files, 1):
+        data = np.genfromtxt(filename, dtype=None, delimiter='\t', skip_header=1,
+        usecols=(0,))
+        if vals is None:
+            vals = data
+        else:
+            vals += data
+    meanvals = vals / idx
+    events = np.genfromtxt(filename, delimiter='\t', names=True, dtype=[('onset',float),('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')])
+    for row, val in itertools.izip(events, meanvals):
+        row['onset']=val
+    for filename in event_files:
+        d = np.genfromtxt(filename, delimiter='\t', names=True, dtype=[('onset',float), ('duration', float),('trial_type', '|S16'), ('stim_file', '|S60')])
+        for i in range(0, len(d)):
+            import numpy.testing as npt
+            npt.assert_almost_equal(events['onset'][i], d['onset'][i], decimal=0)
+            npt.assert_almost_equal(events['duration'][i], d['duration'][i], decimal=0)
+            assert events['trial_type'][i] == d['trial_type'][i]
+
+    # account for more variance by coding the first occurance
+    i = 1
+    while i < len(events):
+        if i == 1:
+            events[i-1]['trial_type'] = events[i-1]['trial_type'] + '_first'
+            i += 1
+        if events[i-1]['trial_type'] != events[i]['trial_type']:
+            events[i]['trial_type'] = events[i]['trial_type'] + '_first'
+            i += 2
+        else:
+            i += 1
+    return events
+
+
+# to get a baseline activation for zscoring
+def extract_baseline(events, movie_ds):
+    import bisect
+    """ This function extracts the mean and standard deviation for z-scoring
+    from those times of the experiments with no stimulation. It is meant to be
+    used within building of the group dataset."""
+    # get last stimulation before break
+    rest_periods_start = []
+    rest_periods_end = []
+    for i in range(len(events)-1):
+        if i == 0:
+            rest_periods_start.append(0.0)
+            rest_periods_end.append(events[i]['onset'])
+        else:
+            dur = events[i+1]['onset'] - events[i]['onset']
+            if dur > 5.0:
+                rest_periods_start.append(events[i]['onset']+events[i]['duration'])
+                rest_periods_end.append(events[i+1]['onset'])
+    # append the last stimulation end, and the end of the scan
+    rest_periods_start.append(events[-1]['onset']+events[-1]['duration'])
+    rest_periods_end.append(movie_ds.sa.time_coords[-1])
+    assert len(rest_periods_start) == len(rest_periods_end)
+    # extract the activation within the time slots and compute mean and std.
+    # a bit tricky as event file and activation data exist in different time
+    # resolutions. Will settle for an approximate solution, where I extract the
+    # time coordinate closest to the onset and offset of restperiods
+    restdata = []
+    for i in range(len(rest_periods_start)):
+        start_idx = bisect.bisect_left(movie_ds[movie_ds.sa.chunks ==
+        0].sa.time_coords, rest_periods_start[i])
+        end_idx = bisect.bisect_left(movie_ds[movie_ds.sa.chunks ==
+        0].sa.time_coords, rest_periods_end[i])
+        restdata.append(movie_ds.samples[start_idx:end_idx])
+    # flatten the list of arrays
+    rests = np.concatenate(restdata)
+    # get mean and std as per-feature vectors
+    means = np.mean(rests, axis=0)
+    std = np.std(rests, axis=0)
+    return means, std
+
+
 # to print  a confusion matrix
-def plot_confusion(matrix, labels=None, fn=None, figsize=(9, 9), ACC=None):
+def plot_confusion(matrix, labels=None, fn=None, figsize=(9, 9), ACC=None,
+vmax=None):
     import seaborn as sns
     import matplotlib.pyplot as plt
 
@@ -80,7 +158,8 @@ def plot_confusion(matrix, labels=None, fn=None, figsize=(9, 9), ACC=None):
     fig, ax = plt.subplots(figsize=figsize)
 
     im = sns.heatmap(matrix, cmap='Blues', annot=True, annot_kws={'size': 8},
-                     fmt=',', square=True, ax=ax, vmin=0, vmax=np.percentile(matrix, 90),
+                     fmt=',', square=True, ax=ax, vmin=0, vmax=vmax or
+                     np.percentile(matrix, 90),
                      xticklabels=labels, yticklabels=labels)
     ax.xaxis.tick_top()
     if ACC:
@@ -125,9 +204,13 @@ def buildthisshit(zscore=True):
         movie_ds.fa['participant']=[participant] * movie_ds.shape[1]
         print('loaded movie data for participant {}.'.format(participant))
 
-        #zscore stuff
+        # zscore the data with means and standard deviations from no-stimulation
+        # periods
         if zscore:
-            mv.zscore(movie_ds, chunks_attr='chunks')
+            events = get_group_events()
+            means, stds = extract_baseline(events, movie_ds)
+        #zscore stuff
+            mv.zscore(movie_ds, params = (means, stds), chunks_attr='chunks')
             print('finished zscoring for participant {}.'.format(participant))
         else:
             print('I did not zscore, as no one specified zscore=True in buildthisshit()')
@@ -223,25 +306,26 @@ def buildthisshit(zscore=True):
         movie_ds.fa['all_ROIs'] = all_rois_flat
         # saving individual data
         mv.h5save(basedir + participant + locdir + '/func/' + \
-        '{}_ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass.hdf5'.format(participant),
+        '{}_ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore.hdf5'.format(participant),
         movie_ds)
 
         # join all datasets
         movie_dss.append(movie_ds)
 
     # save full dataset
-    mv.h5save(basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass.hdf5', movie_dss)
+    mv.h5save(basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore.hdf5', movie_dss)
     print('saved the collection of all subjects datasets as {}.'.format(basedir +
-    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass.hdf5'))
+    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore.hdf5'))
 
     # squish everything together
     ds_wide = mv.hstack(movie_dss)
 
     # transpose the dataset, time points are now features
     ds = mv.Dataset(ds_wide.samples.T, sa=ds_wide.fa.copy(), fa=ds_wide.sa.copy())
-    mv.h5save(basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5', ds)
+    mv.h5save(basedir +
+    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore_transposed.hdf5', ds)
     print('Transposed the group-dataset and saved it as {}.'.format(basedir +
-    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'))
+    'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore_transposed.hdf5'))
     return ds
 
 
@@ -273,22 +357,22 @@ def dothefuckingclassification(ds):
                             callback=store_sens)
     results = cv(ds)
     # save classification results
-    with open('/data/movieloc/backup_store/gnb_cv_results/objectcategory_clf.txt', 'a') as f:
+    with  open('/data/movieloc/backup_store/gnb_cv_results/objectcategory_clf_custom-zscore.txt', 'a') as f:
         f.write(cv.ca.stats.as_string(description=True))
     # print the confusion matrix
     reorder = [1, 0, 2, 8, 3, 9, 4, 10, 5, 11, 6, 12, 7]
     matrix = cv.ca.stats.matrix[reorder][:, reorder]
     labels = np.array(['EV' if label=='VIS' else label for label in
                     cv.ca.stats.labels])[reorder]
-    plot_confusion(matrix, labels, fn=basedir + 'confusion_GNB.pdf',
+    plot_confusion(matrix, labels, fn=basedir + 'confusion_GNB_custom-zscore.pdf',
                     ACC=cv.ca.stats.stats['mean(ACC)'])
     #save the results dataset
-    mv.h5save(basedir + 'gnb_cv_classification_results.hdf5', results)
+    mv.h5save(basedir + 'gnb_cv_classification_results_custom-zscore.hdf5', results)
     print('Saved the crossvalidation results at {}.'.format(basedir +
-    'gnb_cv_classification_results.hdf5'))
-    mv.h5save(basedir + 'sensitivities_nfold.hdf5', sensitivities)
+    'gnb_cv_classification_results_custom-zscore.hdf5'))
+    mv.h5save(basedir + 'sensitivities_nfold_custom-zscore.hdf5', sensitivities)
     print('Saved the sensitivities at {}.'.format(basedir +
-    'sensitivities_nfold.hdf5'))
+    'sensitivities_nfold_custom-zscore.hdf5'))
     # results now has the overall accuracy. results.samples gives the
     # accuracy per participant.
     # sensitivities contains a dataset for each participant with the
@@ -318,19 +402,17 @@ def classification_rois_only(ds):
                                 enable_ca=['stats'],
                                 callback=store_sens)
     results_rois = cv_rois(ds_ROIs)
-    with open(basedir + 'cv_only_rois.txt', 'a') as f:
+    with open(basedir + 'cv_only_rois_custom-zscore.txt', 'a') as f:
         f.write(cv_rois.ca.stats.as_string(description=True))
     # plot and save the confusion matrix
-    reorder_roi = [0, 1, 6, 2, 7, 3, 8, 4, 9, 5,10]
+    reorder_roi = [0, 3, 8, 4, 9, 2, 7, 1, 6, 5, 10]
+#    [0, 1, 6, 2, 7, 3, 8, 4, 9, 5,10]
     matrix = cv_rois.ca.stats.matrix[reorder_roi][:, reorder_roi]
     labels = np.array(['EV' if label=='VIS' else label for label in
                 cv_rois.ca.stats.labels])[reorder_roi]
-    plot_confusion(matrix, labels, fn=basedir+'confusion_GNB_only_rois.pdf', \
+    plot_confusion(matrix, labels, fn=basedir+'confusion_GNB_only_rois_custom-zscore.pdf', \
                     ACC = cv_rois.ca.stats.stats['mean(ACC)'])
-    print('Calculated and saved the classification results on data excluding \
-        the rest of the brain. Results can be found at {}, and \
-        {}'.format(basedir+'cv_only_rois.txt', \
-        basedir+'confusion_GNB_only_rois.pdf'))
+    print('Calculated and saved the classification results on data excluding the rest of the brain. Results can be found at {}, and  {}'.format(basedir+'cv_only_rois_custom-zscore.txt', basedir+'confusion_GNB_only_rois_custom-zscore.pdf'))
     return sensitivities_rois, cv_rois
 
 # rerun with coordinates
@@ -361,22 +443,24 @@ def classification_with_coords(ds, full = False):
 
     results_with_coords = cv_with_coords(ds_coords)
     # save results
-    with open(basedir + 'cv_with_coords_{}.txt'.format(name_ex), 'a') as f:
+    with open(basedir + 'cv_with_coords_{}_custom-zscore.txt'.format(name_ex), 'a') as f:
         f.write(cv_with_coords.ca.stats.as_string(description=True))
     # plot and save the confusion matrix
     if full:
         reorder = [1, 0, 2, 8, 3, 9, 4, 10, 5, 11, 6, 12, 7]
     else:
-        reorder = [0, 1, 6, 2, 7, 3, 8, 4, 9, 5,10]
+        reorder = [0, 3, 8, 4, 9, 2, 7, 1, 6, 5, 10]
+                 #[0, 1, 6, 2, 7, 3, 8, 4, 9, 5,10]
     matrix = cv_with_coords.ca.stats.matrix[reorder][:, reorder]
     labels = np.array(['EV' if label=='VIS' else label for label in
                 cv_with_coords.ca.stats.labels])[reorder]
-    plot_confusion(matrix, labels=labels, fn=basedir + 'confusion_GNB_with_coords_{}.pdf'.format(name_ex), \
+    plot_confusion(matrix, labels=labels, fn=basedir +
+    'confusion_GNB_with_coords_{}_custom-zscore.pdf'.format(name_ex), \
                 ACC = cv_with_coords.ca.stats.stats['mean(ACC)'])
     print('Calculated and saved the classification results on data including \
         coordinates. Results can be found at {}, and \
-        {}'.format(basedir+ name_ex + 'cv_with_coords_{}.txt', \
-        basedir+name_ex+'confusion_GNB_with_coords_{}.pdf'))
+        {}'.format(basedir+ name_ex + 'cv_with_coords_{}_custom-zscore.txt', \
+        basedir+name_ex+'confusion_GNB_with_coords_{}_custom-zscore.pdf'))
 
 def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
     """dothefuckingglm does the fucking glm. It will squish the sensitivity
@@ -441,9 +525,9 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
                                             design_kwargs=dict(drift_model='blank'),
                                             glmfit_kwargs=dict(model='ols'),
                                             return_model=True)
-    mv.h5save(basedir + 'sens_glm_objectcategories_results', hrf_estimates)
+    mv.h5save(basedir + 'sens_glm_objectcategories_results_custom-zscore.hdf5', hrf_estimates)
     print('calculated glm, saving results at {}.'.format(basedir +
-    'sens_glm_objectcategories_results'))
+    'sens_glm_objectcategories_results_custom-zscore.hdf5'))
     print('I am done with the glm')
     return hrf_estimates
 
@@ -504,10 +588,7 @@ def makeaplot(events, mean_sens_transposed, hrf_estimates, roi_pair):#, cv):
                 del colors[0]
                 acc=cv.ca.stats.stats['ACC%']
                 plt.title('R squared: {}, accuracy: {}'.format(model_fit, acc))
-                plt.savefig(basedir + '{}_vs_{}_run-{}'.format(roi_pair[0], roi_pair[1], run))
-
-
-
+                plt.savefig(basedir + '{}_vs_{}_run-{}_custom-zscore'.format(roi_pair[0], roi_pair[1], run))
 
 
 
@@ -527,8 +608,8 @@ if __name__ == '__main__':
 #        zscor=False
     # check whether data for subjects exists already, so that we can skip
     # buildthisshit()
-    groupdata = basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'
-    sensdata = basedir + 'sensitivities_nfold.hdf5'
+    groupdata = basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_desc-custom-zscore_transposed.hdf5'
+    sensdata = basedir + 'sensitivities_nfold_custom-zscore.hdf5'
     ev_file = basedir + 'group_events.tsv'
     if os.path.isfile(groupdata):
         ds = mv.h5load(groupdata)
