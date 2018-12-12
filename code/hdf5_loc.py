@@ -513,18 +513,18 @@ def makeaplot(events, mean_sens_transposed, hrf_estimates, roi_pair):#, cv):
 
 if __name__ == '__main__':
     import os.path
-    import argparse
+#    import argparse
+#
+#    parser = argparse.ArgumentParser()
+#    parser.add_argument('-z', '--z_score', help="Should the data be z-scored? \
+#                        (0: True/1: False)", type=int, default=0)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-z', '--z_score', help="Should the data be z-scored? \
-                        (0: True/1: False)", type=int, default=0)
-
-    args = parser.parse_args()
-    # I'm not sure whether this works
-    if args.z_score == 0:
-        zscore=True
-    else:
-        zscor=False
+#    args = parser.parse_args()
+#    # I'm not sure whether this works
+#    if args.z_score == 0:
+#       zscore=True
+#    else:
+#        zscor=False
     # check whether data for subjects exists already, so that we can skip
     # buildthisshit()
     groupdata = basedir + 'ses-localizer_task-objectcategories_ROIs_space-custom-subject_desc-highpass_transposed.hdf5'
@@ -533,7 +533,7 @@ if __name__ == '__main__':
     if os.path.isfile(groupdata):
         ds = mv.h5load(groupdata)
     else:
-        ds = buildthisshit(zscore=zscore)
+        ds = buildthisshit(zscore=True)
     if (os.path.isfile(sensdata)) and (os.path.isfile(ev_file)):
         sensitivities = mv.h5load(sensdata)
         events = np.genfromtxt(ev_file, names=('onset', 'duration',
