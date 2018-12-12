@@ -510,8 +510,8 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
             i += 1
     # save the event_file
     fmt = "%10.3f\t%10.3f\t%16s\t%60s"
-    np.savetxt(basedir + 'group_events.tsv', events, delimiter='\t', comments='', \
-     header='onset\tduration\ttrial_type\tstim_file', fmt=fmt)
+    ##np.savetxt(basedir + 'group_events.tsv', events, delimiter='\t', comments='', \
+    ##header='onset\tduration\ttrial_type\tstim_file', fmt=fmt)
     # get events into dictionary
     dicts = []
     for i in range(0, len(events)):
