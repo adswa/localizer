@@ -402,16 +402,16 @@ def classification_rois_only(ds):
                                 enable_ca=['stats'],
                                 callback=store_sens)
     results_rois = cv_rois(ds_ROIs)
-    with open(basedir + 'cv_only_rois_custom-zscore.txt', 'a') as f:
-        f.write(cv_rois.ca.stats.as_string(description=True))
+#    with open(basedir + 'cv_only_rois_custom-zscore.txt', 'a') as f:
+#        f.write(cv_rois.ca.stats.as_string(description=True))
     # plot and save the confusion matrix
     reorder_roi = [0, 3, 8, 4, 9, 2, 7, 1, 6, 5, 10]
 #    [0, 1, 6, 2, 7, 3, 8, 4, 9, 5,10]
     matrix = cv_rois.ca.stats.matrix[reorder_roi][:, reorder_roi]
     labels = np.array(['EV' if label=='VIS' else label for label in
                 cv_rois.ca.stats.labels])[reorder_roi]
-    plot_confusion(matrix, labels, fn=basedir+'confusion_GNB_only_rois_custom-zscore.pdf', \
-                    ACC = cv_rois.ca.stats.stats['mean(ACC)'])
+ #   plot_confusion(matrix, labels, fn=basedir+'confusion_GNB_only_rois_custom-zscore.pdf', \
+ #                   ACC = cv_rois.ca.stats.stats['mean(ACC)'])
     print('Calculated and saved the classification results on data excluding the rest of the brain. Results can be found at {}, and  {}'.format(basedir+'cv_only_rois_custom-zscore.txt', basedir+'confusion_GNB_only_rois_custom-zscore.pdf'))
     return sensitivities_rois, cv_rois
 
@@ -443,8 +443,8 @@ def classification_with_coords(ds, full = False):
 
     results_with_coords = cv_with_coords(ds_coords)
     # save results
-    with open(basedir + 'cv_with_coords_{}_custom-zscore.txt'.format(name_ex), 'a') as f:
-        f.write(cv_with_coords.ca.stats.as_string(description=True))
+ #   with open(basedir + 'cv_with_coords_{}_custom-zscore.txt'.format(name_ex), 'a') as f:
+ #       f.write(cv_with_coords.ca.stats.as_string(description=True))
     # plot and save the confusion matrix
     if full:
         reorder = [1, 0, 2, 8, 3, 9, 4, 10, 5, 11, 6, 12, 7]
@@ -454,9 +454,9 @@ def classification_with_coords(ds, full = False):
     matrix = cv_with_coords.ca.stats.matrix[reorder][:, reorder]
     labels = np.array(['EV' if label=='VIS' else label for label in
                 cv_with_coords.ca.stats.labels])[reorder]
-    plot_confusion(matrix, labels=labels, fn=basedir +
-    'confusion_GNB_with_coords_{}_custom-zscore.pdf'.format(name_ex), \
-                ACC = cv_with_coords.ca.stats.stats['mean(ACC)'])
+ #   plot_confusion(matrix, labels=labels, fn=basedir +
+ #   'confusion_GNB_with_coords_{}_custom-zscore.pdf'.format(name_ex), \
+ #               ACC = cv_with_coords.ca.stats.stats['mean(ACC)'])
     print('Calculated and saved the classification results on data including \
         coordinates. Results can be found at {}, and \
         {}'.format(basedir+ name_ex + 'cv_with_coords_{}_custom-zscore.txt', \
@@ -525,7 +525,7 @@ def dothefuckingglm(sensitivities):    ## CODE TO CALCULATE ONE GLM PER SUBJECT?
                                             design_kwargs=dict(drift_model='blank'),
                                             glmfit_kwargs=dict(model='ols'),
                                             return_model=True)
-    mv.h5save(basedir + 'sens_glm_objectcategories_results_custom-zscore.hdf5', hrf_estimates)
+#    mv.h5save(basedir + 'sens_glm_objectcategories_results_custom-zscore.hdf5', hrf_estimates)
     print('calculated glm, saving results at {}.'.format(basedir +
     'sens_glm_objectcategories_results_custom-zscore.hdf5'))
     print('I am done with the glm')
