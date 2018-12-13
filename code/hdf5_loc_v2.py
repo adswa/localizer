@@ -694,6 +694,7 @@ if __name__ == '__main__':
     if coords == 'with-coordinates':
         ds = get_voxel_coords(ds, append=True, zscore=True)
         store_sens = False
+	glm = False
         ## TODO: Do I at one point want to append the time_coordinates also to
         ## TODO: the dataset with coordinates?
     # of append coordinates and get rid of fmri data is specified
