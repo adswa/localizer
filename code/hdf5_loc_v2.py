@@ -207,12 +207,12 @@ def plot_confusion(cv,
     origlabels = cv.ca.stats.labels
     origlabels_indexes = dict([(x,i) for i,x in enumerate(origlabels)])
     reorder = [origlabels_indexes.get(labels[i]) for i in range(len(labels))]
-    matrix = cv.ca.stats.matrix[reorder][:, reorder]
+    matrix = cv.ca.stats.matrix[reorder][:, reorder].T
     # Plot matrix with color scaled to 90th percentile
     fig, ax = plt.subplots(figsize=figsize)
-    im = sns.heatmap(matrix,
+    im = sns.heatmap(100*matrix.astype(float)/np.sum(matrix, axis=1)[:, None],
                      cmap='gist_heat_r',
-                     annot=True,
+                     annot=matrix,
                      annot_kws={'size': 8},
                      fmt=',',
                      square=True,
@@ -427,12 +427,13 @@ def dotheclassification(ds, store_sens):
     # plot the confusion matrix with pymvpas build-in plot function currently fails
     ##cv.ca.stats.plot(labels = labels, numbers = True, cmap = 'gist_hear_r')
     ##plt.savefig(results_dir + 'confusion_matrix.png')
-
+    print('accuracy is {}'.format(cv.ca.stats.stats['mean(ACC)']))
     # plot confusion matrix with seaborne
     plot_confusion(cv,
                    labels,
                    fn = results_dir + 'confusion_GNB.pdf',
-                   ACC = cv.ca.stats.stats['mean(ACC)'])
+                   ACC = cv.ca.stats.stats['mean(ACC)'],
+		   vmax=100)
 
     mv.h5save(results_dir + 'gnb_cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
