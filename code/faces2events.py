@@ -1,16 +1,26 @@
 #!/home/adina/env/wtf3/bin/python
 """
 This script will get an rudimentary event file from face detection json files.
+Supply json file with --infile flag and output with --outfile path
 """
 import json
 import gzip
+import pandas as pd
 
-base_dir = '/data/movieloc/backup_store/saccs/'
-source_dir = '/sourcedata/'
+if __name__ == '__main__':
+    import argparse
 
+    parser =  argparse.ArgumentParser()
+    parser.add_argument('-i', '--infile', help = 'json.gz file with detected faces', required = True)
+    parser.add_argument('-o', '--outfile', help = 'path and filename where output should go to', required = True)
 
+    args = parser.parse_args()
+
+    facefile = args.infile
+    outfile = args.outfile
+
+    print(facefile, outfile)
 # load in the data from json
-facefile = base_dir + source_dir + 'comp_stim_features/data/faces/detected_faces.json*'
 with gzip.open(facefile, 'rt') as f:
     json_data = json.load(f)
 
@@ -22,8 +32,9 @@ df['duration'] = 0.04
 
 # save the data file
 
-df.to_csv(base_dir + source_dir + 'comp_stim_features/data/faces/events.tsv',
+df.to_csv(outfile,
           sep = '\t',
           header = True,
           index = False)
+
 
