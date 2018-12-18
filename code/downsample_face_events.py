@@ -26,7 +26,8 @@ for file in files:
     data['onset'] = data.onset.apply(round, ndigits=0)
     duration = data.groupby('onset').sum().duration
     amplitude = data.groupby('onset').max()['condition']
-    condition =  ['face' if i > 0 else 'no_face' for i in amplitude]
+#    condition =  ['face' if i > 0 else 'no_face' for i in amplitude]
+    condition =  ['no_face' if i == 0 else 'face' if i <= 3 else 'many_faces' for i in amplitude]
     onset = [float(i) for i in range(0, len(duration))]
     df = pd.DataFrame({'onset': onset, 'duration': duration, 'condition': condition})
     cols = ['onset', 'duration', 'condition']
