@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 """
 created on Wed Jan 30 2018
 author: Christian Olaf Haeusler
