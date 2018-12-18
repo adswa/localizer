@@ -1,0 +1,15 @@
+[submodule "src/emotions"]
+	path = src/emotions
+	url = https://github.com/psychoinformatics-de/paper-f1000_gumpemotions
+[submodule "src/locations"]
+	path = src/locations
+	url = https://github.com/psychoinformatics-de/studyforrest-paper-locationannotation.git
+[submodule "src/semanticconflict"]
+	path = src/semanticconflict
+	url = https://github.com/psychoinformatics-de/studyforrest-paper-ironyannotation.git
+[submodule "src/faces"]
+	path = src/faces
+	url = https://github.com/psychoinformatics-de/studyforrest-paper-faceannotation.git
+[submodule "src/bodycontact"]
+	path = src/bodycontact
+	url = https://github.com/psychoinformatics-de/studyforrest-paper-bodycontactannotation.git
