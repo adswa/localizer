@@ -10,3 +10,6 @@
 [submodule "studyforrest-data-visualrois"]
 	path = sourcedata/visualrois
 	url = git@github.com:psychoinformatics-de/studyforrest-data-visualrois.git
+[submodule "comp_stim_features"]
+	path = sourcedata/comp_stim_features
+	url = medusa.ovgu.de:/home/data/psyinf/forrest_gump/collection/comp_stim_features
