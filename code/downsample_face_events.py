@@ -24,12 +24,18 @@ for file in files:
     data = pd.read_csv(file, sep='\t')
     # round to full seconds
     data['onset'] = data.onset.apply(round, ndigits=0)
-    data = data.groupby('onset').sum()
-    data['bool_faces'] = [1 if i > 0 else 0 for i in data['condition']]
-    data['onset'] = [float(i) for i in range(0, len(data))]
-    data.rename(columns={'condition':'total_faces'}, inplace=True)
+    duration = data.groupby('onset').sum().duration
+    amplitude = data.groupby('onset').max()['condition']
+    condition =  ['face' if i > 0 else 'no_face' for i in amplitude]
+    onset = [float(i) for i in range(0, len(duration))]
+    df = pd.DataFrame({'onset': onset, 'duration': duration, 'condition': condition})
+    cols = ['onset', 'duration', 'condition']
+    df = df[cols]
+  ##  data['bool_faces'] = [1 if i > 0 else 0 for i in data['condition']]
+  ##  data['onset'] = [float(i) for i in range(0, len(data))]
+  ##  data.rename(columns={'condition':'total_faces'}, inplace=True)
     # save result
     if not os.path.isdir(args.output):
         os.makedirs(args.output)
-    data.to_csv(args.output + '/' + os.path.split(file)[1], sep = '\t', header=True, index=False)
+    df.to_csv(args.output + '/' + os.path.split(file)[1], sep = '\t', header=True, index=False)
 
