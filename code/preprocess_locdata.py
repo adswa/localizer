@@ -12,8 +12,20 @@ It should do:
 - Brain extraction
 - spatial smoothing: 4mm
 - highpass filter: cutoff 100
-- slice time correction (fsls "1: regular up" option) (--> do that with nipype.interfaces.fsl.SliceTimer
---> update: no slice time correction anymore
+- slice time correction (fsls "1: regular up" option) 
+--> update: no slice time correction anymore, order by Yarik ;-)
+
+
+=====================================================================================
+USAGE:
+This script was build to run on hydra, however, a partial upgrade of hydra and some
+outdated packages (among them, nipype) caused this code to fail spectaculary when
+executed though. For this purpose, the container 'BIDSSacc' was created
+(https://www.singularity-hub.org/collections/1877). The script was executed with
+datalad containers-run.
+NOTE: We encountered problems with datalad run, as this directory is not reachable
+from the automatically bind-mounted /home/adina/. We therefore had to hardcode bind-
+points into the image version 1.1!! On version 1.0, there are no hardcoded bindpoints.
 
 """
 
