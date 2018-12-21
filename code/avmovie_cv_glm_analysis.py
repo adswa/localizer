@@ -315,13 +315,13 @@ def dotheglm(sensitivities,
     # sort according to onsets to be paranoid
     night_sorted = night.sort_values(by='onset')
 
-    assert np.all(locations_sorted.onset[1:] >= locations_sorted.onset[:-1])
-    import pdb; pdb.set_trace()
-    assert np.all(time_back_sorted.onset[1:] >= time_back_sorted.onset[:-1])
-    assert np.all(time_forward_sorted.onset[1:] >= time_forward_sorted.onset[:-1])
-    assert np.all(exterior_sorted.onset[1:] >= exterior_sorted.onset[:-1])
-    assert np.all(night_sorted.onset[1:] >= night_sorted.onset[:-1])
-    assert np.all(scene_change_sorted.onset[1:] >= scene_change_sorted.onset[:-1])
+    #import pdb; pdb.set_trace()
+    assert np.all(locations_sorted.onset[1:].values >= locations_sorted.onset[:-1].values)
+    assert np.all(time_back_sorted.onset[1:].values >= time_back_sorted.onset[:-1].values)
+    assert np.all(time_forward_sorted.onset[1:].values >= time_forward_sorted.onset[:-1].values)
+    assert np.all(exterior_sorted.onset[1:].values >= exterior_sorted.onset[:-1].values)
+    assert np.all(night_sorted.onset[1:].values >= night_sorted.onset[:-1].values)
+    assert np.all(scene_change_sorted.onset[1:].values >= scene_change_sorted.onset[:-1].values)
 
     # check whether chunks are increasing as well as sanity check
     chunks = mean_sens_transposed.sa.chunks
@@ -413,7 +413,7 @@ def dotheglm(sensitivities,
                                            return_model=True)
 
     mv.h5save(results_dir + '/' + 'sens_glm_avmovie_results.hdf5', hrf_estimates)
-    print('calculated the, saving results.')
+    print('calculated the glm, saving results.')
 
     return hrf_estimates
 
