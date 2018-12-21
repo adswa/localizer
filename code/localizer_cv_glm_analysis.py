@@ -54,7 +54,11 @@ def bilateralize(ds):
 
 def get_group_events(eventdir):
     event_files = sorted(glob(eventdir + '*_events.tsv'))
-
+    print(eventdir)
+    if len(event_files) == 0:
+        print('No event files were discovered. Make sure you only specify the directory'
+              'the eventfiles are in, and not the names of the eventfiles. The way the'
+              'event files are globbed is glob(eventdir + "*_events.tsv").')
     # compute the average of the event files to get a general event file
     vals = None
     for idx, filename in enumerate(event_files, 1):
@@ -267,7 +271,7 @@ def dotheclassification(ds,
     return sensitivities, cv
 
 
-def dotheglm(sensitivities, store_sens = True):
+def dotheglm(sensitivities, eventdir):
     """dotheglm does the glm. It will squish the sensitivity
     dataset by vstacking them, calculating the mean sensitivity per ROI pair
     with the mean_group_sample() function, transpose it with a
@@ -287,7 +291,7 @@ def dotheglm(sensitivities, store_sens = True):
     mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
 
     # average onsets into one event file
-    events = get_group_events()
+    events = get_group_events(eventdir)
     # save the event_file
     fmt = "%10.3f\t%10.3f\t%16s\t%60s"
     np.savetxt(results_dir + 'group_events.tsv', events, delimiter='\t', comments='',
@@ -519,7 +523,7 @@ if __name__ == '__main__':
                                             store_sens=store_sens)
 
     if glm:
-        hrf_estimates = dotheglm(sensitivities)
+        hrf_estimates = dotheglm(sensitivities, eventdir)
 
     if plot_ts:
         # read the event files, they've been produced by the glm
