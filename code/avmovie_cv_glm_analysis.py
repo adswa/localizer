@@ -316,6 +316,7 @@ def dotheglm(sensitivities,
     night_sorted = night.sort_values(by='onset')
 
     assert np.all(locations_sorted.onset[1:] >= locations_sorted.onset[:-1])
+    import pdb; pdb.set_trace()
     assert np.all(time_back_sorted.onset[1:] >= time_back_sorted.onset[:-1])
     assert np.all(time_forward_sorted.onset[1:] >= time_forward_sorted.onset[:-1])
     assert np.all(exterior_sorted.onset[1:] >= exterior_sorted.onset[:-1])
