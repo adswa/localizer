@@ -202,10 +202,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    base_dir = args.base_dir
-    data_dir = args.data_dir
-    anat_dir = args.anat_dir
-    results_dir = args.results_dir
+    base_dir = args.base_dir + '/'
+    data_dir = '/' + args.data_dir + '/'
+    anat_dir = '/' + args.anat_dir + '/'
+    results_dir = '/' + args.results_dir + '/'
     save_per_subject = args.save_individual_data
     if args.ROIs:
         rois = [str(roi) for roi in args.ROIs]
