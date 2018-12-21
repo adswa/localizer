@@ -189,10 +189,6 @@ if __name__ == '__main__':
                                                  "which the anatomical data (ROIs) of "
                                                  "participants can be found (e.g. /ses-movie/anat/",
                         required=True)
-    parser.add_argument('-t', '--template_dir', help="Please specify the directory under which the"
-                                                     "template data for transformations can be found"
-                                                     "(e.g. /ses-movie/xfm/)",
-                        required = True)
     parser.add_argument('-r', '--results_dir', help="Please specify the directory under which the"
                                                     "resulting groupdatafiles should be saved.",
                         required=True)
@@ -209,7 +205,6 @@ if __name__ == '__main__':
     base_dir = args.base_dir
     data_dir = args.data_dir
     anat_dir = args.anat_dir
-    template_dir = args.template_dir
     results_dir = args.results_dir
     save_per_subject = args.save_individual_data
     if args.ROIs:
