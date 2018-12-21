@@ -192,11 +192,11 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--results_dir', help="Please specify the directory under which the"
                                                     "resulting groupdatafiles should be saved.",
                         required=True)
-    parser.add_arguments('s', '--save_individual_data', help="Please specify whether you want each participants"
+    parser.add_argument('-s', '--save_individual_data', help="Please specify whether you want each participants"
                                                              "individual dataset to be saved (in the respective"
                                                              "participants ses-movie/func/ directory)(True, False)",
                          default=False)
-    parser.add_arguments('R', '--ROIs', nargs='+', help="Supply all ROIs you want to include "
+    parser.add_argument('-R', '--ROIs', nargs='+', help="Supply all ROIs you want to include "
                                                         "(as --ROIs 'VIS' 'FFA' ...). If no ROIs are provided,"
                                                         "the dataset will include all ROIs.")
 
