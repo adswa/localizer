@@ -27,10 +27,13 @@ NOTE: We encountered problems with datalad run, as this directory is not reachab
 from the automatically bind-mounted /home/adina/. We therefore had to hardcode bind-
 points into the image version 1.1!! On version 1.0, there are no hardcoded bindpoints.
 
+This is the command used (taken from the git log)
+"singularity run .datalad/environments/BIDSSacc/image
+code/preprocess_locdata.py --experiment_dir=.
+--work_dir=/backup/tmp/adina/workdir_preproc",
+executed with datalad containers-run.
+
 """
-
-
-
 
 from __future__ import print_function
 from __future__ import division
@@ -539,11 +542,6 @@ tolist = lambda x: [x]
 highpass_operand = lambda x: '-bptf %.10f -1' % x
 
 
-
-
-
-
-
 def create_susan_smooth(name="susan_smooth", separate_masks=True):
     """Create a SUSAN smoothing workflow
 
@@ -757,6 +755,8 @@ def preprocess_loc(experiment_dir,
                   name='datasink')
     datasink.inputs.base_directory = experiment_dir
 
+    # we currently do not want to slice time correct anymore,
+    # regard it as superfluous
     #Slicer = pe.Node(fsl.SliceTimer(),
     #                name='Slicer')
 

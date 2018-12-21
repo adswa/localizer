@@ -17,6 +17,7 @@ which sensitivities of a particular linear decision between two brain areas are
 regressed onto the events files of the underlying block design. Data basis is
 the studyforrest phase 2 localizer session. The motion corrected and "aligned"
 datafiles were preprocessed (smoothing, brain extraction, high-pass filtering).
+This script is intended to work with objectcategory localization dataset.
 
 ################################################################################
 ############################### OBJECTIVE ######################################
@@ -578,7 +579,7 @@ def makeaplot(events,
     # end indices to chunk timeseries into runs
     run_startidx = np.array([0, 157, 313, 469])
     run_endidx = np.array([156, 312, 468, 624])
-    # more complex block design?
+
     runs = np.unique(mean_sens_transposed.sa.chunks)
     time_coords = mean_sens_transposed.sa.time_coords
 
@@ -645,8 +646,11 @@ if __name__ == '__main__':
                         ('only-coordinates'). Should coordinates be disregard? \
                         ('no-coordinates') Default: 'no-coordinates'.", type=str,
                         default='no-coordinates')
-    parser.add_argument('-o', '--output', help="Please specify an output directory"
-                                               "name (absolute path) to store the analysis results", type=str)
+    parser.add_argument('-o', '--output', help="Please specify an output directory \
+                        name (absolute path) to store the analysis results", type=str)
+    parser.add_argument('-p', '--plotting', help="Should plots be generated? If True,\
+			the script will draw a timecourse of sensitivities per run \
+			defaults to False.", default=False)
 
     args = parser.parse_args()
     zscore = args.z_score
@@ -657,11 +661,14 @@ if __name__ == '__main__':
 
     # this parameter should guide whether any analysis with coordinates should be performed
     coords = args.coords
+
     results_dir = '/' + args.output + '/'
+
     # if the results directory does not exist, create it:
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-    # the default is to get the sensitivities and compute a glm
+
+    # the default behavior of the code is to get the sensitivities and compute a glm
     store_sens = True
     glm = True
 
