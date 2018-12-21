@@ -8,7 +8,7 @@
 set -e
 set -u
 
-subs=$(find -type d -name 'sub-*' -printf "%f\n" | sort)
+subs=$(find -type d -maxdepth 1 -name 'sub-*' -printf "%f\n" | sort | uniq)
 session=ses-movie
 for sub in $subs; do
     sub_dir=$sub
@@ -17,5 +17,5 @@ done
 
 for sub in $subs; do
     sub_dir=$sub
-    mv {${sub_dir}/func,${sub}/anat,${sub}/xfm} ${sub_dir}/${session};
+    git mv {${sub_dir}/func,${sub}/anat,${sub}/xfm} ${sub_dir}/${session};
 done
