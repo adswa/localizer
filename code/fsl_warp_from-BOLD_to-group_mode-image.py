@@ -4,10 +4,22 @@ import os
 from glob import glob
 from subprocess import call
 
+"""
+This script will transform the BOLD data from the movie session
+into group space. It was executed with datalad run in commit 
+ae485fa14d02b9afcc66b410d4c17581f2d5bf52
+
+Warning to myself: In an attempt to restructure and clean up everything
+in a more BIDS-like fashing, I'm adding the ses-movie directory I previously
+forgot to create. Once done, I need to make sure everything is still running
+neatly.
+"""
+
+
 base_dir='/data/movieloc/backup_store/saccs/'
-template_dir='/xfm/'
-data_dir='/func/'
-roi_dir='/anat/'
+template_dir='/ses-movie/xfm/'
+data_dir='/ses-movie/func/'
+roi_dir='/ses-movie/anat/'
 
 interpolation = 'nn'
 
