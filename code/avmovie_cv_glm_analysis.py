@@ -136,7 +136,7 @@ def dotheclassification(ds,
     fold in a combined dataset for further use in a glm.
     If sens == False, the sensitivities are not stored, and only a
     classification is performed"""
-    import matplotlib.pyplot as plt
+   # import matplotlib.pyplot as plt
     # set up classifier
     prior = 'ratio'
     if bilateral:
@@ -184,10 +184,10 @@ def dotheclassification(ds,
                               cv.ca.stats.labels)
 
     # plot the confusion matrix with pymvpas build-in plot function currently fails
-    cv.ca.stats.plot(labels=labels,
-                     numbers=True,
-                     cmap='gist_heat_r')
-    plt.savefig(results_dir + 'confusion_matrix.png')
+    # cv.ca.stats.plot(labels=labels,
+    #                 numbers=True,
+    #                 cmap='gist_heat_r')
+    # plt.savefig(results_dir + 'confusion_matrix.png')
     if niceplot:
         ACC = cv.ca.stats.stats['mean(ACC)']
         plot_confusion(cv,
