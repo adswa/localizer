@@ -47,3 +47,26 @@ c = pd.crosstab(times, facefull, normalize='index')
 s = c.stack().reset_index().rename(columns={0: 'value'})
 sns.barplot(x=s.row_0, y=s.value, hue=s.col_0)
 
+
+
+
+
+
+
+
+#results:
+
+#col_0         face  manyface   no_face
+#row_0                                 
+#constant  0.607334  0.056301  0.336365
+#future    0.596939  0.045918  0.357143
+#past      0.531250  0.062500  0.406250
+#
+
+#without normalization
+#col_0     face  manyface  no_face
+#row_0                            
+#constant  4207       390     2330
+#future     117         9       70
+#past        17         2       13
+#
