@@ -232,7 +232,7 @@ def dotheclassification(ds,
     results = cv(ds)
     # save classification results
 
-    with open(results_dir + 'avmovie_clf.txt', 'a') as f:
+    with open(results_dir + 'objectcategories_clf.txt', 'a') as f:
         f.write(cv.ca.stats.as_string(description=True))
     # printing of the confusion matrix
     if bilateral:
