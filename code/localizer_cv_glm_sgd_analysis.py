@@ -1,4 +1,6 @@
-mport numpy as np
+#!/home/adina/wtf/bin/python
+
+import numpy as np
 import mvpa2.suite as mv
 from glob import glob
 import pandas as pd
@@ -194,7 +196,7 @@ def dotheclassification(ds,
     fold in a combined dataset for further use in a glm.
     If sens == False, the sensitivities are not stored, and only a
     classification is performed"""
-    import matplotlib.pyplot as plt
+#    import matplotlib.pyplot as plt
     # set up the dataset: If I understand the sourcecode correctly, the
     # MulticlassClassifier wants to have unique labels in a sample attribute
     # called 'targets' and is quite stubborn with this name - I could not convince
@@ -251,19 +253,19 @@ def dotheclassification(ds,
     labels = get_known_labels(desired_order, cv.ca.stats.labels)
 
     # plot the confusion matrix with pymvpas build-in plot function currently fails
-    cv.ca.stats.plot(labels=labels,
-                     numbers=True,
-                     cmap='gist_heat_r')
-    plt.savefig(results_dir + 'confusion_matrix.png')
-    if niceplot:
-        ACC = cv.ca.stats.stats['mean(ACC)']
-        plot_confusion(cv,
-                       labels,
-                       fn=results_dir + 'confusion_matrix_avmovie.svg',
-                       figsize=(9, 9),
-                       vmax=100,
-                       cmap='Blues',
-                       ACC='%.2f' % ACC)
+#    cv.ca.stats.plot(labels=labels,
+#                     numbers=True,
+#                     cmap='gist_heat_r')
+#    plt.savefig(results_dir + 'confusion_matrix.png')
+#    if niceplot:
+#        ACC = cv.ca.stats.stats['mean(ACC)']
+#        plot_confusion(cv,
+#                       labels,
+#                       fn=results_dir + 'confusion_matrix_avmovie.svg',
+#                       figsize=(9, 9),
+#                       vmax=100,
+#                       cmap='Blues',
+#                       ACC='%.2f' % ACC)
     mv.h5save(results_dir + 'SGD_cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
     if store_sens:
@@ -406,7 +408,8 @@ def makeaplot(events,
 
             # get the beta corresponding to the stimulus to later use in label
 
-            for i in range(len(onsets)):beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus.replace(" ", ""), 0]
+            for i in range(len(onsets)):
+                beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus.replace(" ", ""), 0]
                 r_width = durations[i]
                 x = stimulation_end[i]
                 rectangle = plt.Rectangle((x, y),
@@ -550,7 +553,8 @@ if __name__ == '__main__':
                                             store_sens=store_sens)
 
     if glm:
-        hrf_estimates = dotheglm(sensitivities)
+        hrf_estimates = dotheglm(sensitivities,
+                                eventdir)
 
     if plot_ts:
         # read the event files, they've been produced by the glm
