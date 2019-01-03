@@ -132,7 +132,7 @@ def dotheclassification(ds,
     fold in a combined dataset for further use in a glm.
     If sens == False, the sensitivities are not stored, and only a
     classification is performed"""
-    import matplotlib.pyplot as plt
+#    import matplotlib.pyplot as plt
     # set up the dataset: If I understand the sourcecode correctly, the
     # MulticlassClassifier wants to have unique labels in a sample attribute
     # called 'targets' and is quite stubborn with this name - I could not convince
@@ -189,20 +189,20 @@ def dotheclassification(ds,
                               cv.ca.stats.labels)
 
     # plot the confusion matrix with pymvpas build-in plot function currently fails
-    cv.ca.stats.plot(labels=labels,
-                     numbers=True,
-                     cmap='gist_heat_r')
-    plt.savefig(results_dir + 'confusion_matrix.png')
-    if niceplot:
-        ACC = cv.ca.stats.stats['mean(ACC)']
-        plot_confusion(cv,
-                       labels,
-                       fn=results_dir + 'confusion_matrix_avmovie.svg',
-                       figsize=(9, 9),
-                       vmax=100,
-                       cmap='Blues',
-                       ACC='%.2f' % ACC)
-    mv.h5save(results_dir + 'SGD_cv_classification_results.hdf5', results)
+#    cv.ca.stats.plot(labels=labels,
+#                     numbers=True,
+#                     cmap='gist_heat_r')
+#    plt.savefig(results_dir + 'confusion_matrix.png')
+#    if niceplot:
+#        ACC = cv.ca.stats.stats['mean(ACC)']
+#        plot_confusion(cv,
+#                       labels,
+#                       fn=results_dir + 'confusion_matrix_avmovie.svg',
+#                       figsize=(9, 9),
+#                       vmax=100,
+#                       cmap='Blues',
+#                       ACC='%.2f' % ACC)
+#    mv.h5save(results_dir + 'SGD_cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
     if store_sens:
         mv.h5save(results_dir + 'sensitivities_nfold.hdf5', sensitivities)
