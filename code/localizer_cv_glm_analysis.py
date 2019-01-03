@@ -318,7 +318,6 @@ def dotheglm(sensitivities, eventdir):
     return hrf_estimates
 
 
-# TODO: make this pretty
 def makeaplot(events,
               sensitivities,
               hrf_estimates,
@@ -352,8 +351,16 @@ def makeaplot(events,
     # end indices to chunk timeseries into runs
     run_startidx = np.array([0, 157, 313, 469])
     run_endidx = np.array([156, 312, 468, 624])
-    # more complex block design?
+
     runs = np.unique(mean_sens_transposed.sa.chunks)
+
+    for j in range(len(hrf_estimates.fa.bilat_ROIs_str)):
+        comparison = hrf_estimates.fa.bilat_ROIs[j][0]
+        if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
+            roi_pair_idx = j
+    roi_betas_ds = hrf_estimates[:, roi_pair_idx]
+    roi_sens_ds = mean_sens_transposed[:, roi_pair_idx]
+
     for run in runs:
         fig, ax = plt.subplots(1, 1, figsize=[18, 10])
         colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32', '#27ae60',
@@ -375,14 +382,13 @@ def makeaplot(events,
             r_height = 1
             color = colors[0]
             y = 6
-            for j in range(len(hrf_estimates.fa.bilat_ROIs_str)):
-                comparison = hrf_estimates.fa.bilat_ROIs[j][0]
-                if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
-                    idx = j
+
+            # get the beta corresponding to the stimulus to later use in label
+            beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus.replace(" ", ""), 0]
+
             for i in range(len(onsets)):
                 r_width = durations[i]
                 x = stimulation_end[i]
-                beta = hrf_estimates.samples[hrf_estimates.sa.condition == stimulus.replace(" ","")][0][idx]
                 rectangle = plt.Rectangle((x, y),
                                           r_width,
                                           r_height,
@@ -392,21 +398,17 @@ def makeaplot(events,
                 plt.gca().add_patch(rectangle)
                 plt.legend(loc=1)
             del colors[0]
-        for i in range(len(sensitivities[0])):
-            comparison = (sensitivities[0][i].sa.items()[0][1].value[0])
-            if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
-                sens_targets = sensitivities[0][i].samples
-                times = sensitivities[0][i].fa.time_coords[run_startidx[run]:run_endidx[run]]
-                run_coords = np.array((times, sens_targets[0][run_startidx[run]:run_endidx[run]]))
-                ax.plot(run_coords[0], run_coords[1], '-', color='black', lw=1.5)
-                # plot glm model results
-                glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], i]
-                ax2 = ax.twinx()
-                ax2.plot(times, glm_model, '-', color='#7b241c', lw=1.5)
-                model_fit = hrf_estimates.a.model.results_[0.0].R2[i]
-                plt.title('R squared: {}'.format(model_fit))
-                if fn:
-                    plt.savefig(results_dir + 'timecourse_localizer_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0], roi_pair[1], run + 1))
+
+        times = roi_sens_ds.sa.time_coords[run_startidx[run]:run_endidx[run]]
+
+        ax.plot(times, roi_sens_ds.samples[run_startidx[run]:run_endidx[run]], '-', color='black', lw=1.0)
+        glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], roi_pair_idx]
+        ax.plot(times, glm_model, '-', color='#7b241c', lw=1.0)
+        model_fit = hrf_estimates.a.model.results_[0.0].R2[roi_pair_idx]
+        plt.title('R squared: %.2f' % model_fit)
+        if fn:
+            plt.savefig(results_dir + 'timecourse_localizer_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0], roi_pair[1], run + 1))
+
 
 
 if __name__ == '__main__':
