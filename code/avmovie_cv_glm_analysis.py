@@ -1,4 +1,4 @@
-#!/home/adina/wtf/bin/python
+#!/usr/bin/env python
 
 """
 This script takes an existing transposed hdf5 dataset, containing the studyforrest
@@ -136,7 +136,7 @@ def dotheclassification(ds,
     fold in a combined dataset for further use in a glm.
     If sens == False, the sensitivities are not stored, and only a
     classification is performed"""
-   # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     # set up classifier
     prior = 'ratio'
     if bilateral:

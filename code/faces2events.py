@@ -1,4 +1,5 @@
-#!/home/adina/env/wtf3/bin/python
+#!/usr/bin/env python
+
 """
 This script will get an rudimentary event file from face detection json files.
 Supply json file with --infile flag and output with --outfile path

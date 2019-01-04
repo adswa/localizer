@@ -1,4 +1,4 @@
-#!/home/adina/wtf/bin/python
+#!/usr/bin/env python
 
 import numpy as np
 import mvpa2.suite as mv
@@ -198,7 +198,7 @@ def dotheclassification(ds,
     fold in a combined dataset for further use in a glm.
     If sens == False, the sensitivities are not stored, and only a
     classification is performed"""
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     # set up classifier
     prior = 'ratio'
     if bilateral:

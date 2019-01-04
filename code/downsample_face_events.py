@@ -1,4 +1,4 @@
-#!/home/adina/env/wtf3/bin/python
+#!/usr/bin/env python
 
 """ takes the segmented event files and downsamples them. 
 Specify path to the segmented event files and path where to store outputs. """
