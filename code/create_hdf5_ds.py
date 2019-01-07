@@ -166,6 +166,7 @@ def createdataset(analysis,
     for participant in participants:
         # count the number of participant substitutions necessary
         data_fns = sorted(glob(rootdir + participant + datadir))
+        print(rootdir + participant + datadir)
         mask_fn = rootdir + participant + anatdir + 'brain_mask_tmpl.nii.gz'
         if analysis == 'localizer':
             assert len(data_fns) == 4
@@ -308,13 +309,13 @@ if __name__ == '__main__':
                                                  "baseline zscoring, specify a path to the directory with the event"
                                                  "files based on root directory or as an absolute path. "
                                                  "(e.g. 'sourcedata/phase2/*/ses-localizer/func/")
-    parser.add_argument('-z', 'z-scoring', help="What kind of z-scoring should be done?"
+    parser.add_argument('-z', '--zscoring', help="What kind of z-scoring should be done?"
                                                 "'zscore', 'no-zscore', 'baseline-zscore' (the latter option is"
                                                 "only available for the localizer data and needs directory of"
                                                 "the stimulations eventfiles in --eventdir).", default='zscore')
     parser.add_argument("-t", "--type", help="Which dataset is analysed? 'localizer' or 'avmovie'.",
                         required=True)
-    parser.add_argument("-r", "--rois", help=" Specify a list of ROIs (e.g. 'FFA' 'PPA' 'EBA') to"
+    parser.add_argument("--rois", help=" Specify a list of ROIs (e.g. 'FFA' 'PPA' 'EBA') to"
                                              "only include specific ROIs. If nothing is specified, all ROIs are used.",
                         nargs='+')
     parser.add_argument('-o', '--output', help="Where should the resulting datafile be"
@@ -325,8 +326,8 @@ if __name__ == '__main__':
 
     rootdir = args.rootdir + '/'
     anatdir = '/' + args.anatdir + '/'
-    datadir = '/' + args.datadir + '/'
-    zscore = args.z-scoring
+    datadir = '/' + args.datadir
+    zscore = args.zscoring
     if zscore == 'baseline-zscore' and not args.eventdir:
         print('Custom zscoring only works when this script is given event information.'
               'Please specify the --event_path flag with a path to the event files, such as'
@@ -334,13 +335,13 @@ if __name__ == '__main__':
               'For now, I will default to normal z-scoring.')
         eventdir = None
         zscore = 'zscore'
-    elif zscore == 'baseline_zscore' and args.eventdir:
+    elif zscore == 'baseline-zscore' and args.eventdir:
         eventdir = args.eventdir + '/'
     else:
         eventdir = None
 
     if args.output:
-        outdir = args.output
+        outdir = args.output + '/'
     else:
         outdir = rootdir
     if not os.path.isdir(outdir):
