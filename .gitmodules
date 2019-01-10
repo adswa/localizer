@@ -13,3 +13,6 @@
 [submodule "comp_stim_features"]
 	path = sourcedata/comp_stim_features
 	url = medusa.ovgu.de:/home/data/psyinf/forrest_gump/collection/comp_stim_features
+[submodule "sourcedata/eyetrack"]
+	path = sourcedata/eyetrack
+	url = adina@medusa.ovgu.de:/home/data/psyinf/scratch/studyforrest-data-eyemovementlabels
