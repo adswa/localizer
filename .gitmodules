@@ -16,3 +16,6 @@
 [submodule "sourcedata/eyetrack"]
 	path = sourcedata/eyetrack
 	url = adina@medusa.ovgu.de:/home/data/psyinf/scratch/studyforrest-data-eyemovementlabels
+[submodule "sourcedata/multimatch"]
+	path = sourcedata/multimatch
+	url = adina@medusa.ovgu.de:/home/adina/multimatch_forrest
