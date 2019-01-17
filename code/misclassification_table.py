@@ -17,16 +17,16 @@ def strip_ds(ds, order='full'):
               "the dataset.")
         if 'brain' in np.unique(ds.sa.all_ROIs):
             ds = ds[(ds.sa.all_ROIs != 'brain'), :]
-            assert 'brain' in ds.sa.all_ROIs
+            assert 'brain' not in ds.sa.all_ROIs
             print('excluded the rest of the brain from the dataset.')
         if 'overlap' in np.unique(ds.sa.all_ROIs):
             ds = ds[(ds.sa.all_ROIs != 'overlap'), :]
-            assert 'overlap' in ds.sa.all_ROIs
+            assert 'overlap' not in ds.sa.all_ROIs
     if order == 'sparse':
         print("attempting to exclude any overlaps from the dataset.")
         if 'overlap' in np.unique(ds.sa.all_ROIs):
             ds = ds[(ds.sa.all_ROIs != 'overlap'), :]
-            assert 'overlap' in ds.sa.all_ROIs
+            assert 'overlap' not in ds.sa.all_ROIs
             print('excluded overlap from the dataset.')
     return ds
 
@@ -35,8 +35,8 @@ def bilateralize(ds):
     """combine lateralized ROIs in a dataset."""
     ds_ROIs = ds.copy('deep')
     ds_ROIs.sa['bilat_ROIs'] = [label.split(' ')[-1] for label in ds_ROIs.sa.all_ROIs]
-    mv.h5save(results_dir + 'ds_ROIs.hdf5', ds_ROIs)
-    print('Combined lateralized ROIs for the provided dataset and saved the dataset.')
+    # mv.h5save(results_dir + 'ds_ROIs.hdf5', ds_ROIs)
+    print('Combined lateralized ROIs for the provided dataset.')
     return ds_ROIs
 
 
@@ -162,17 +162,20 @@ def dotheclassification(ds_movie,
     compare_exp['pred_movie'] = all_testing_movie.predictions
     compare_exp['pred_loc'] = all_testing_loc.predictions
 
+    # get the ROIS from the classification
+    ROIS = np.unique(ds_movie.sa.targets)
+
     # there can't be values greater than two or lower than zero
     assert compare_exp.hits.max() <= 2
     assert compare_exp.hits.min() >= 0
-    return compare_exp, all_testing
+    return compare_exp, all_testing, ROIS
 
 
 def dice_matrix(ROIS,
                 compare_exp,
                 bilateral=True,
                 ds_type='stripped',
-                plotting=False):
+                plotting=True):
     """
     This function plots a matrix of dice coefficients between the two
     datasets classification results. The dice coefficients indicates
@@ -209,7 +212,7 @@ def dice_matrix(ROIS,
                              'left PPA', 'right PPA']
     if ds_type == 'stripped':
         if bilateral:
-            desired_order -= ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+            desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
         else:
             desired_order = ['VIS', 'left LOC', 'right LOC',
                              'left OFA', 'right OFA', 'left FFA',
@@ -223,7 +226,7 @@ def dice_matrix(ROIS,
         import seaborn as sn
         plt.figure()
         sn.heatmap(sim_matrix, annot=True, cmap='Blues')
-        plt.savefig(results_dir + 'heatmap of dice coefficients.png')
+        plt.savefig(results_dir + 'heatmap_of_dice_coefficients.png')
 
     return sim_matrix
 
@@ -268,6 +271,7 @@ def calc_sim_metrics(compare_exp,
                                        (all_testing.predictions == ROI)])
         misclass_locs.append(misclass_loc)
         # compute the dice index from intersection / sum cardinalities of the sets (experiments)
+        # import pdb; pdb.set_trace()
         DSC = (float(2 * common_hits)) / (float(card_loc + card_movie))
         DSCs.append(DSC)
         # calculate the number and portion of correctly classified voxels NOT correctly classified
@@ -303,14 +307,14 @@ def calc_sim_metrics(compare_exp,
     attribs['movie_alone_abs'] = movie_alone_abss
     attribs['loc_alone_abs'] = loc_alone_abss
 
-    return prop_found_by_both, movie_alone_proportions,\
+    return prop_found_by_both, movie_alone_proportions, \
            loc_alone_proportions, prop_found_by_none, attribs
     # plot as horizontal bar plot:
 
 
 def plot_voxelclf_per_ds(compare_exp,
                          all_testing,
-                         ds_movie):
+                         ROIS):
     """
     Builds and ordered dict of matrics to compare voxel classifications per ROI from,
     and plots the proportion of voxel per roi that are...
@@ -321,10 +325,9 @@ def plot_voxelclf_per_ds(compare_exp,
     """
     # compute dice indices and for localizer and movie experiment, per ROI,
     # compute the amount of voxels only one experiment could classify correctly.
-    ROIS = np.unique(ds_movie.sa.targets)
     both, movie, loc, none, attribs = calc_sim_metrics(compare_exp,
-                                                      all_testing,
-                                                      ROIS)
+                                                       all_testing,
+                                                       ROIS)
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     n = list(range(len(ROIS)))
@@ -432,12 +435,18 @@ if __name__ == '__main__':
         ds_movie = bilateralize(ds_movie)
         ds_loc = bilateralize(ds_loc)
 
-    compare_exp, all_testing = dotheclassification(ds_movie,
-                                                   ds_loc,
-                                                   classifier,
-                                                   bilateral)
+    compare_exp, all_testing, ROIS = dotheclassification(ds_movie,
+                                                         ds_loc,
+                                                         classifier,
+                                                         bilateral)
 
     plot_voxelclf_per_ds(compare_exp,
                          all_testing,
-                         ds_movie)
+                         ROIS)
+
+    dice_matrix(ROIS,
+                compare_exp,
+                bilateral=True,
+                ds_type='stripped',
+                plotting=True)
 
