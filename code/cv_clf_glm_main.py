@@ -500,9 +500,26 @@ def dotheglm(sensitivities,
                                   )
     # transpose the averaged sensitivity dataset
     mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
-
     # if we're analyzing the avmovie data:
     if analysis == 'avmovie':
+
+        # TR was not preserved/carried through in .a
+        # so we will guestimate it based on the values of time_coords
+        tc = mean_sens_transposed.sa.time_coords
+        TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
+        assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
+
+        # make time coordinates real seconds
+        mean_sens_transposed.sa.time_coords = np.arange(len(mean_sens_transposed)) * TRdirty
+
+        # get runs, and runlengths in seconds
+        runs = sorted(mean_sens_transposed.UC)
+        assert runs == range(len(runs))
+        runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
+                          for run in runs]
+        runonsets = [sum(runlengths[:run]) for run in runs]
+        assert len(runs) == 8
+
         if multimatch:
             # glob and sort the multimatch results
             multimatch_files = sorted(glob(multimatch))
@@ -511,16 +528,6 @@ def dotheglm(sensitivities,
             # far, means.csv files always restart onset as zero.
             # the onsets restart every new run from zero, we have to append the
             # runonset times:
-            # TR was not preserved/carried through in
-            # so we will guestimate it based on the values of time_coords
-            tc = mean_sens_transposed.sa.time_coords
-            TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
-            # time coordinates in TRs
-            runs = np.unique(mean_sens_transposed.sa.chunks)
-            assert len(multimatch_files) == len(runs)
-            runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
-                                      for run in runs]
-            runonsets = [sum(runlengths[:run]) for run in runs]
             for idx, multimatch_file in enumerate(multimatch_files):
                 data = pd.read_csv(multimatch_file, sep = '\t')
                 data['onset'] += runonsets[idx]
@@ -648,23 +655,6 @@ def dotheglm(sensitivities,
         # check whether chunks are increasing as well as sanity check
         chunks = mean_sens_transposed.sa.chunks
         assert np.all(chunks[1:] >= chunks[:-1])
-
-        # TR was not preserved/carried through in .a
-        # so we will guestimate it based on the values of time_coords
-        tc = mean_sens_transposed.sa.time_coords
-        TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
-        assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
-
-        # make time coordinates real seconds
-        mean_sens_transposed.sa.time_coords = np.arange(len(mean_sens_transposed)) * TRdirty
-
-        # get runs, and runlengths in seconds
-        runs = sorted(mean_sens_transposed.UC)
-        assert runs == range(len(runs))
-        runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
-                      for run in runs]
-        runonsets = [sum(runlengths[:run]) for run in runs]
-        assert len(runs) == 8
 
         # initialize the list of dicts that gets later passed to the glm
         events_dicts = []
