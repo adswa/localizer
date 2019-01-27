@@ -387,19 +387,27 @@ def dotheclassification(ds,
     if ds_type == 'full':
         if bilateral:
             desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+            if 'FEF' in ds.sa.bilat_ROIs:
+                desired_order.append('FEF')
         else:
             desired_order = ['brain', 'VIS', 'left LOC', 'right LOC',
                              'left OFA', 'right OFA', 'left FFA',
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
+            if 'FEF' in ds.sa.all_ROIs:
+                desired_order.extend('right FEF', 'left FEF')
     if ds_type == 'stripped':
         if bilateral:
             desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+            if 'FEF' in ds.sa.bilat_ROIs:
+                desired_order.append('FEF')
         else:
             desired_order = ['VIS', 'left LOC', 'right LOC',
                              'left OFA', 'right OFA', 'left FFA',
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
+            if 'FEF' in ds.sa.all_ROIs:
+                desired_order.extend('right FEF', 'left FEF')
 
     labels = get_known_labels(desired_order,
                               cv.ca.stats.labels)
