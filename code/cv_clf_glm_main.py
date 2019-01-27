@@ -523,6 +523,7 @@ def dotheglm(sensitivities,
         if multimatch:
             # glob and sort the multimatch results
             multimatch_files = sorted(glob(multimatch))
+            assert len(multimatch_files) == len(runs)
             multimatch_dfs = []
             # read in the files, and make sure we get the onsets to increase. So
             # far, means.csv files always restart onset as zero.
@@ -543,7 +544,6 @@ def dotheglm(sensitivities,
             from scipy import stats
             dur_sim = stats.zscore(mm.duration_sim) + 1
             pos_sim = stats.zscore(mm.position_sim) + 1
-
             onset = mm.onset.values
 
             # put them into event file structure
@@ -723,14 +723,15 @@ def dotheglm(sensitivities,
             dic = {
                 'onset': row['onset'],
                 'duration': row['duration'],
-                'condition': row['condition']
+                'condition': row['condition'],
+                'amplitude': row['amplitude']
             }
             events_dicts.append(dic)
 
         # save this event dicts structure  as a tsv file
         import csv
         with open(results_dir + '/' + 'full_event_file.tsv', 'w') as tsvfile:
-            fieldnames = ['onset', 'duration', 'condition']
+            fieldnames = ['onset', 'duration', 'condition', 'amplitude']
             writer = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
             writer.writerows(events_dicts)
@@ -755,7 +756,8 @@ def dotheglm(sensitivities,
             dic = {
                 'onset': events[i][0],
                 'duration': events[i][1],
-                'condition': events[i][2]
+                'condition': events[i][2],
+                'amplitude': events[i][3]
             }
             events_dicts.append(dic)
 
@@ -967,7 +969,7 @@ def makeaplot_avmovie(events,
 
         # for each stimulus, plot a color band on top of the plot
         for stimulus in block_design:
-            # color = colors[0]
+            color = colors[0]
             print(stimulus)
             condition_event_mask = events['condition'] == stimulus
             onsets = events[condition_event_mask]['onset'].values
@@ -1110,12 +1112,13 @@ if __name__ == '__main__':
                         "gradient descent (l-sgd), stochastic gradient descent (sgd)",
                         type=str, required=True)
     parser.add_argument('--normalize', help="Should the sensitivities used for the glm be"
-                        "normalized by their L2 norm? True/False", default=True)
-    parser.add_argument('--multimatch', help="path to the multimatch mean results
-                        per run. If given, the similarity measures
-                        for position and duration will be included in the
-                        avmovie glm analysis. Provide path including file name,
-                        as in 'sourcedata/multimatch/output/run_*/means.tsv'")
+                        "normalized by their L2 norm? True/False",
+                        default=True)
+    parser.add_argument('--multimatch', help="path to multimatch mean results"
+                        "per run. If given, the similarity measures"
+                        "for position and duration will be included in the"
+                        "avmovie glm analysis. Provide path including file name,"
+                        "as in 'sourcedata/multimatch/output/run_*/means.tsv'")
 
     ## TODO: REMODNAV AND MULTIMATCH DATA as additional events
 
