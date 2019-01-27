@@ -712,6 +712,8 @@ def dotheglm(sensitivities,
         if multimatch:
             dfs.append(pos_sim_ev_sorted[cols])
             dfs.append(dur_sim_ev_sorted[cols])
+        # lets also reset the index here
+        allevents = pd.concat(dfs).reset_index()
 
         # save all non-face related events in an event file, just for the sake of it
         allevents.to_csv(results_dir + '/' + 'non_face_regs.tsv', sep='\t', index=False)
