@@ -579,14 +579,19 @@ def dotheglm(sensitivities,
         onset = []
         duration = []
         condition = []
+        # lets also append an amplitude, we need this if multimatch is included
+        # and should not hurt if its not included
+        amplitude = []
         for set in setting:
             for i in range(location_annotation.setting[location_annotation['setting'] == set].value_counts()[0]):
                 onset.append(location_annotation[location_annotation['setting'] == set]['onset'].values[i])
                 duration.append(location_annotation[location_annotation['setting'] == set]['duration'].values[i])
             condition.append([set] * (i + 1))
-        # flatten conditions
+            amplitude.append([1.0] * (i + 1))
+        # flatten conditions and amplitudes
         condition = [y for x in condition for y in x]
-        assert len(condition) == len(onset) == len(duration)
+        amplitude = [y for x in amplitude for y in x]
+        assert len(condition) == len(onset) == len(duration) == len(amplitude)
 
         # concatenate the strings
         condition_str = [set.replace(' ', '_') for set in condition]
@@ -596,7 +601,8 @@ def dotheglm(sensitivities,
         locations = pd.DataFrame({
             'onset': onset,
             'duration': duration,
-            'condition': condition_str
+            'condition': condition_str,
+            'amplitude': amplitude
         })
 
         # sort according to onsets to be paranoid
@@ -606,14 +612,16 @@ def dotheglm(sensitivities,
         time_forward = pd.DataFrame([{
             'condition': 'time+',
             'onset': location_annotation['onset'][i],
-            'duration': 1.0}
+            'duration': 1.0,
+            'amplitude': 1.0}
             for i in range(len(location_annotation) - 1)
             if location_annotation['flow_of_time'][i] in ['+', '++']])
 
         time_back = pd.DataFrame([{
             'condition': 'time-',
             'onset': location_annotation['onset'][i],
-            'duration': 1.0} for i in range(len(location_annotation) - 1)
+            'duration': 1.0,
+            'amplitude': 1.0} for i in range(len(location_annotation) - 1)
             if location_annotation['flow_of_time'][i] in ['-', '--']])
 
         # sort according to onsets to be paranoid
@@ -623,7 +631,8 @@ def dotheglm(sensitivities,
         scene_change = pd.DataFrame([{
             'condition': 'scene-change',
             'onset': location_annotation['onset'][i],
-            'duration': 1.0}
+            'duration': 1.0,
+            'amplitude': 1.0}
             for i in range(len(location_annotation) - 1)])
 
         scene_change_sorted = scene_change.sort_values(by='onset')
@@ -632,7 +641,8 @@ def dotheglm(sensitivities,
         exterior = pd.DataFrame([{
             'condition': 'exterior',
             'onset': location_annotation['onset'][i],
-            'duration': location_annotation['duration'][i]}
+            'duration': location_annotation['duration'][i],
+            'amplitude': 1.0}
             for i in range(len(location_annotation) - 1)
             if (location_annotation['int_or_ext'][i] == 'ext')])
 
@@ -642,7 +652,8 @@ def dotheglm(sensitivities,
         # this is a dataframe encoding nighttime
         night = pd.DataFrame([{'condition': 'night',
                                'onset': location_annotation['onset'][i],
-                               'duration': location_annotation['duration'][i]}
+                               'duration': location_annotation['duration'][i],
+                               'amplitude': 1.0}
                               for i in range(len(location_annotation) - 1)
                               if (location_annotation['time_of_day'][i] == 'night')])
 
@@ -667,7 +678,7 @@ def dotheglm(sensitivities,
         events_dicts = []
         # This is relevant to later stack all dataframes together
         # and paranoidly make sure that they have the same columns
-        cols = ['onset', 'duration', 'condition']
+        cols = ['onset', 'duration', 'condition', 'amplitude']
 
         for run in runs:
             # get face data
@@ -681,15 +692,17 @@ def dotheglm(sensitivities,
                     dic = {
                         'onset': row['onset'] + runonsets[run],
                         'duration': row['duration'],
-                        'condition': row['condition']
+                        'condition': row['condition'],
+                        'amplitude': 1.0
                     }
                     events_dicts.append(dic)
 
-        # concatenate all event dataframes
+        # events for runs
         run_reg = pd.DataFrame([{
             'onset': runonsets[i],
             'duration': abs(runonsets[i] - runonsets[i + 1]),
-            'condition': 'run-' + str(i + 1)}
+            'condition': 'run-' + str(i + 1),
+            'amplitude': 1.0}
             for i in range(7)])
 
         # get all of these wonderful dataframes into a list and squish them
