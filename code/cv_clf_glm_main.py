@@ -31,8 +31,9 @@ Command line specifications are as follows:
     IF --glm True, specify:
         --eventdir:         Where does the script find the necessary event 
                             files for derivation of regressors?
-        --multimatch:       Where is the mean multimatch file (all runs), if the
-                            should be included?
+        --multimatch:       Where are the mean multimatch files (per runs), if the
+                            should be included?(i.e.
+                            sourcedata/multimatch/output/run_*/means.csv)
         --plot_time_series: Boolean, should a time series plot of the 
                             sensitivity and glm fit be produced?
         IF --plot_time_series True:
@@ -43,6 +44,9 @@ Command line specifications are as follows:
                                                 be put into the timeseries plot?
                     --annotation:               str, path to the singular, 
                                                 long researchcut movie annotation
+                    --multimatch:               Path to allruns.tsv multimatch
+                                                results. Uses Position and
+                                                Duration Similarity.
 """
 
 
@@ -461,6 +465,7 @@ def dotheglm(sensitivities,
              normalize,
              analysis,
              classifier,
+             multimatch,
              annot_dir=None):
 
     """dotheglm() regresses sensitivities obtained during
@@ -498,6 +503,56 @@ def dotheglm(sensitivities,
 
     # if we're analyzing the avmovie data:
     if analysis == 'avmovie':
+        if multimatch:
+            # glob and sort the multimatch results
+            multimatch_files = sorted(glob(multimatch))
+            multimatch_dfs = []
+            # read in the files, and make sure we get the onsets to increase. So
+            # far, means.csv files always restart onset as zero.
+            # the onsets restart every new run from zero, we have to append the
+            # runonset times:
+            # TR was not preserved/carried through in
+            # so we will guestimate it based on the values of time_coords
+            tc = mean_sens_transposed.sa.time_coords
+            TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
+            # time coordinates in TRs
+            runs = np.unique(mean_sens_transposed.sa.chunks)
+            assert len(multimatch_files) == len(runs)
+            runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
+                                      for run in runs]
+            runonsets = [sum(runlengths[:run]) for run in runs]
+            for idx, multimatch_file in enumerate(multimatch_files):
+                data = pd.read_csv(multimatch_file, sep = '\t')
+                data['onset'] += runonsets[idx]
+                multimatch_dfs.append(data)
+
+            # get everything into one large df
+            mm = pd.concat(multimatch_dfs).reset_index()
+            assert np.all(mm.onset[1:].values >= mm.onset[:-1].values)
+            # get the duration and position similarity measures from multimatch
+            # zcore the Position and Duration results around mean 1. We use
+            # those because of a suboptimal correlation structure between the
+            # similarity measures.
+            from scipy import stats
+            dur_sim = stats.zscore(mm.duration_sim) + 1
+            pos_sim = stats.zscore(mm.position_sim) + 1
+
+            onset = mm.onset.values
+
+            # put them into event file structure
+            dur_sim_ev = pd.DataFrame({
+                'onset': onset,
+                'duration': mm.duration.values,
+                'condition': ['duration_sim'] * len(mm),
+                'amplitude': dur_sim
+            })
+
+            pos_sim_ev = pd.DataFrame({
+                'onset': onset,
+                'duration': mm.duration.values,
+                'condition': ['position_sim'] * len(mm),
+                'amplitude': pos_sim
+            })
 
         # get a list of the event files with occurances of faces
         event_files = sorted(glob(eventdir + '/*'))
@@ -1042,6 +1097,11 @@ if __name__ == '__main__':
                         type=str, required=True)
     parser.add_argument('--normalize', help="Should the sensitivities used for the glm be"
                         "normalized by their L2 norm? True/False", default=True)
+    parser.add_argument('--multimatch', help="path to the multimatch mean results
+                        per run. If given, the similarity measures
+                        for position and duration will be included in the
+                        avmovie glm analysis. Provide path including file name,
+                        as in 'sourcedata/multimatch/output/run_*/means.tsv'")
 
     ## TODO: REMODNAV AND MULTIMATCH DATA as additional events
 
@@ -1176,6 +1236,12 @@ if __name__ == '__main__':
                       " basis you supplied is the data from the avmovie task."
                       "However, you did not specify a directory where to find"
                       " the single annotation file under --annotation")
+            if args.multimatch:
+                multimatch = args.multimatch
+                print("Multimatch data will be included.")
+            else:
+                multimatch = False
+                print("Multimatch data is not used.")
 
         #if the data basis is localizer...
         if analysis == 'localizer':
@@ -1256,7 +1322,8 @@ if __name__ == '__main__':
                                  classifier=classifier,
                                  analysis=analysis,
                                  annot_dir=annot_dir,
-                                 eventdir=eventdir)
+                                 eventdir=eventdir,
+                                 multimatch=multimatch)
         if plot_ts:
             events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
             makeaplot_avmovie(events,
@@ -1273,7 +1340,8 @@ if __name__ == '__main__':
                                  normalize=normalize,
                                  analysis=analysis,
                                  classifier=classifier,
-                                 eventdir=eventdir)
+                                 eventdir=eventdir,
+                                 multimatch=multimatch)
         if plot_ts:
             # read the event files, they've been produced by the glm
             events = pd.read_csv(results_dir + 'group_events.tsv',
