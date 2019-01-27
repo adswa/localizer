@@ -560,6 +560,10 @@ def dotheglm(sensitivities,
                 'condition': ['position_sim'] * len(mm),
                 'amplitude': pos_sim
             })
+            # sort dataframes to be paranoid
+            pos_sim_ev_sorted = pos_sim_ev.sort_values(by='onset')
+            dur_sim_ev_sorted = dur_sim_ev.sort_values(by='onset')
+
 
         # get a list of the event files with occurances of faces
         event_files = sorted(glob(eventdir + '/*'))
@@ -651,6 +655,9 @@ def dotheglm(sensitivities,
         assert np.all(exterior_sorted.onset[1:].values >= exterior_sorted.onset[:-1].values)
         assert np.all(night_sorted.onset[1:].values >= night_sorted.onset[:-1].values)
         assert np.all(scene_change_sorted.onset[1:].values >= scene_change_sorted.onset[:-1].values)
+        if multimatch:
+            assert np.all(pos_sim_ev_sorted.onset[1:].values >= pos_sim_ev_sorted.onset[:-1].values)
+            assert np.all(dur_sim_ev_sorted.onset[1:].values >= dur_sim_ev_sorted.onset[:-1].values)
 
         # check whether chunks are increasing as well as sanity check
         chunks = mean_sens_transposed.sa.chunks
@@ -689,7 +696,9 @@ def dotheglm(sensitivities,
         dfs = [locations_sorted[cols], scene_change_sorted[cols],
                time_back_sorted[cols], time_forward_sorted,
                exterior_sorted[cols], night_sorted[cols], run_reg[cols]]
-        allevents = pd.concat(dfs)
+        if multimatch:
+            dfs.append(pos_sim_ev_sorted[cols])
+            dfs.append(dur_sim_ev_sorted[cols])
 
         # save all non-face related events in an event file, just for the sake of it
         allevents.to_csv(results_dir + '/' + 'non_face_regs.tsv', sep='\t', index=False)
