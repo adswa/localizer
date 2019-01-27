@@ -198,9 +198,9 @@ def createdataset(analysis,
                                       '{0}_*_mask_tmpl.nii.gz'.format(roi)))
             else:
                 left_roi_fns = sorted(glob(rootdir + participant + anatdir + \
-                                           'l{0}_*_mask_tmpl.nii.gz'.format(roi)))
+                                           'l{0}*mask_tmpl.nii.gz'.format(roi)))
                 right_roi_fns = sorted(glob(rootdir + participant + anatdir + \
-                                            'r{0}_*_mask_tmpl.nii.gz'.format(roi)))
+                                            'r{0}*mask_tmpl.nii.gz'.format(roi)))
                 roi_fns = left_roi_fns + right_roi_fns
             if len(roi_fns) == 0:
                 print("ROI {0} does not exist for participant {1}; appending all zeros".format(roi, participant))
