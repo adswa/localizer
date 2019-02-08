@@ -17,6 +17,8 @@ The derivatives directory contains
 - stimuli/researchcut/avmovie (the subsets of this large file corresponding to each movie run. This cutting was done with sourcedata/annotations/code/researchcut2segments.py)
 - stimuli/researchcut/downsampled_event_files (The former event files as proper event files (with code/faces2events.py), and downsampled to seconds (with code/downsample_face_events.py)
 - results: Results of various flavours of the analysis on either the location data (performed with code/localizer_cv_glm_analysis.py) or the moviedata (performed with code/avmovie_cv_glm_analysis.py).
+- groupspace_analysis: The same analysis as in results, but performed in
+  groupspace. This is the relevant directory to look for results. 
 
 The classification and glm analysis scripts contain commandline-specifyable options to compute partial results (classification, glm, plotting) on the full or only-ROI dataset, containing either no coordinates, additional coordinate information, or only coordinate information.
 The create_hdf5 scripts contain commandline-specifyable options to zscore normally, not at all, or - in the case of the localizer data - on parameters derived from rest periods with no stimulation.
