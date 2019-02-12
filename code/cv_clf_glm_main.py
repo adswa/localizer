@@ -1320,11 +1320,7 @@ if __name__ == '__main__':
                     roi_pair = ['FFA', 'PPA']
                 else:
                     roi_pair = ['right FFA', 'right PPA']
-            else:
-                if bilateral:
-                    roi_pair = ['FFA', 'PPA']
-                else:
-                    roi_pair = ['right FFA', 'right PPA']
+        print("This ROI pair is going to be used: {}".format(roi_pair))
 
         ## TODO: what happens to roi pair in the event of a sgd classifier 1-vs-all?
     # currently, related to the todo, the glm computation won't work in sgd
