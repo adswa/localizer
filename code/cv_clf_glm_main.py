@@ -395,7 +395,7 @@ def dotheclassification(ds,
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
             if 'FEF' in ds.sa.all_ROIs:
-                desired_order.extend('right FEF', 'left FEF')
+                desired_order.extend(['right FEF', 'left FEF'])
     if ds_type == 'stripped':
         if bilateral:
             desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
@@ -407,7 +407,7 @@ def dotheclassification(ds,
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
             if 'FEF' in ds.sa.all_ROIs:
-                desired_order.extend('right FEF', 'left FEF')
+                desired_order.extend(['right FEF', 'left FEF'])
 
     labels = get_known_labels(desired_order,
                               cv.ca.stats.labels)
