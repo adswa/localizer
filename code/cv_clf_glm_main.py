@@ -394,7 +394,7 @@ def dotheclassification(ds,
                              'left OFA', 'right OFA', 'left FFA',
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
-            if 'FEF' in ds.sa.all_ROIs:
+            if 'left FEF' in ds.sa.all_ROIs:
                 desired_order.extend(['right FEF', 'left FEF'])
     if ds_type == 'stripped':
         if bilateral:
@@ -406,7 +406,7 @@ def dotheclassification(ds,
                              'left OFA', 'right OFA', 'left FFA',
                              'right FFA', 'left EBA', 'right EBA',
                              'left PPA', 'right PPA']
-            if 'FEF' in ds.sa.all_ROIs:
+            if 'left_FEF' in ds.sa.all_ROIs:
                 desired_order.extend(['right FEF', 'left FEF'])
 
     labels = get_known_labels(desired_order,
