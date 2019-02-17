@@ -66,6 +66,8 @@ def strip_ds(ds, order='full'):
         if 'overlap' in np.unique(ds.sa.all_ROIs):
             ds = ds[(ds.sa.all_ROIs != 'overlap'), :]
             assert 'overlap' not in ds.sa.all_ROIs
+        mv.h5save(results_dir + 'ds_stripped.hdf5', ds)
+        print('saved stripped ds')
     if order == 'sparse':
         print("attempting to exclude any overlaps from the dataset.")
         if 'overlap' in np.unique(ds.sa.all_ROIs):
