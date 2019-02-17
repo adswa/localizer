@@ -894,7 +894,8 @@ def makeaplot_avmovie(events,
                       bilateral,
                       classifier,
                       fn=None,
-                      include_all_regressors=False):
+                      include_all_regressors=False,
+                      multimatch_only=False):
     """
     This produces a time series plot for the roi class comparison specified in
     roi_pair such as roi_pair = ['left FFA', 'left PPA'].
@@ -975,8 +976,15 @@ def makeaplot_avmovie(events,
         plt.legend(loc=1)
         plt.grid(True)
 
+        #TMP: For the FEF analysis of my Masters Thesis I only want to plot
+        #multimatch results
+        if multimatch_only:
+            relevant_stims = ['position_sim', 'duration_sim']
+        else:
+            relevant_stims = block_design
+
         # for each stimulus, plot a color band on top of the plot
-        for stimulus in block_design:
+        for stimulus in relevant_stims:
             color = colors[0]
             print(stimulus)
             condition_event_mask = events['condition'] == stimulus
@@ -1013,7 +1021,12 @@ def makeaplot_avmovie(events,
             elif stimulus == 'scene-change':
                 color = 'black'
                 y -= 5 * r_height
-
+            elif stimulus == 'duration_sim':
+                color = 'forestgreen'
+                y -= 6 * r_height
+            elif stimulus == 'position_sim':
+                color = 'orangered'
+                y -= 7 * r_height
             # get the beta corresponding to the stimulus to later use in label
             beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus, 0]
 
@@ -1127,6 +1140,8 @@ if __name__ == '__main__':
                         "for position and duration will be included in the"
                         "avmovie glm analysis. Provide path including file name,"
                         "as in 'sourcedata/multimatch/output/run_*/means.tsv'")
+    parser.add_argument('--multimatch-only', help = 'TMPargs, if I only want to'
+                        'plot multimatch regressors', default=False)
 
     ## TODO: REMODNAV AND MULTIMATCH DATA as additional events
 
@@ -1268,6 +1283,10 @@ if __name__ == '__main__':
                 multimatch = False
                 print("Multimatch data is not used.")
 
+            multimatch_only = args.multimatch_only
+            if multimatch_only:
+                print('I will plot only multimatch regressors')
+
         #if the data basis is localizer...
         if analysis == 'localizer':
             print("The analysis will include a glm. Specified input "
@@ -1344,7 +1363,8 @@ if __name__ == '__main__':
                                  analysis=analysis,
                                  annot_dir=annot_dir,
                                  eventdir=eventdir,
-                                 multimatch=multimatch)
+                                 multimatch=multimatch
+                                 )
         if plot_ts:
             events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
             makeaplot_avmovie(events,
@@ -1355,7 +1375,8 @@ if __name__ == '__main__':
                               classifier=classifier,
                               bilateral=bilateral,
                               fn=results_dir,
-                              include_all_regressors=incl_regs)
+                              include_all_regressors=incl_regs,
+                              multimatch_only=multimatch_only)
     elif (glm) and (analysis == 'localizer'):
         hrf_estimates = dotheglm(sensitivities,
                                  normalize=normalize,
