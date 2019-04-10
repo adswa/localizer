@@ -66,6 +66,8 @@ def strip_ds(ds, order='full'):
         if 'overlap' in np.unique(ds.sa.all_ROIs):
             ds = ds[(ds.sa.all_ROIs != 'overlap'), :]
             assert 'overlap' not in ds.sa.all_ROIs
+        mv.h5save(results_dir + 'ds_stripped.hdf5', ds)
+        print('saved stripped ds')
     if order == 'sparse':
         print("attempting to exclude any overlaps from the dataset.")
         if 'overlap' in np.unique(ds.sa.all_ROIs):
@@ -894,7 +896,8 @@ def makeaplot_avmovie(events,
                       bilateral,
                       classifier,
                       fn=None,
-                      include_all_regressors=False):
+                      include_all_regressors=False,
+                      multimatch_only=False):
     """
     This produces a time series plot for the roi class comparison specified in
     roi_pair such as roi_pair = ['left FFA', 'left PPA'].
@@ -975,8 +978,15 @@ def makeaplot_avmovie(events,
         plt.legend(loc=1)
         plt.grid(True)
 
+        #TMP: For the FEF analysis of my Masters Thesis I only want to plot
+        #multimatch results
+        if multimatch_only:
+            relevant_stims = ['position_sim', 'duration_sim']
+        else:
+            relevant_stims = block_design
+
         # for each stimulus, plot a color band on top of the plot
-        for stimulus in block_design:
+        for stimulus in relevant_stims:
             color = colors[0]
             print(stimulus)
             condition_event_mask = events['condition'] == stimulus
@@ -1013,7 +1023,12 @@ def makeaplot_avmovie(events,
             elif stimulus == 'scene-change':
                 color = 'black'
                 y -= 5 * r_height
-
+            elif stimulus == 'duration_sim':
+                color = 'forestgreen'
+                y -= 6 * r_height
+            elif stimulus == 'position_sim':
+                color = 'orangered'
+                y -= 7 * r_height
             # get the beta corresponding to the stimulus to later use in label
             beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus, 0]
 
@@ -1073,79 +1088,63 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-                '-i', '--inputfile',
-                help="An hdf5 file of the avmovie data with functional ROI information, transposed",
-                required=True)
-    parser.add_argument(
-                '--analysis',
-                help="[If glm is computed:] Which dataset is the analysis based on, 'localizer' or 'avmovie'",
-                type=str)
-    parser.add_argument(
-                '-a', '--annotation',
-                help="Input a single, full movie spanning location annotation file, if you want to compute the glm.")
-    parser.add_argument(
-                '-e', '--eventdir',
-                help="Input the directory name under which the downsamples, run-wise event files can be found, if you "
-                    "want to compute the glm (localizer e.g. 'sourcedata/phase2/*/ses-localizer/func/' movie e.g. "
-                     "'derivatives/stimuli/researchcut/downsampled_event_files/'.")
-    parser.add_argument(
-                '-bi', '--bilateral',
-                help="If false, computation will be made on hemisphere-specific ROIs (i.e. left FFA, right FFA",
-                default=True)
-    parser.add_argument(
-                '-g', '--glm',
-                help="Should a glm on the sensitivities be computed? Defaults to True, as long as the classification isn't "
-                     "done on an only-coordinates dataset (as specified with the --coords flag)",
-                default=True)
-    parser.add_argument(
-                '-ds', '--dataset',
-                help="Specify whether the analysis should be done on the full dataset or on the dataset with only ROIs: "
-                     "full' or 'stripped' (default: stripped)",
-                type=str, default='stripped')
-    parser.add_argument(
-                '-c', '--coords',
-                help="Should coordinates be included in the dataset? ('with-coordinates').Should a sanity check with only "
-                     "coordinates without fmri data be performed? ('only-coordinates'). Should coordinates be disregard?"
-                     "('no-coordinates') Default: 'no-coordinates'.",
-                type=str,
-                default='no-coordinates')
-    parser.add_argument(
-                '-o', '--output',
-                help="Please specify an output directory name (absolute path) to store the analysis results",
-                type=str)
-    parser.add_argument(
-                '-r', '--roipair',
-                nargs='+',
-                help="Specify two ROIs for which the glm timecourse should be plotted. Default for now is right FFA & right "
-                     "PPA in lateralized dataset, FFA & PPA in bilateral dataset. Specify as --roipair 'FFA' 'PPA'")
-    parser.add_argument(
-                '-n', '--niceplot',
-                help="If true, the confusion matrix of the classification will be plotted with Matplotlib instead of build "
-                     "in functions of pymvpa.",
-                default=False)
-    parser.add_argument(
-                '-ps', '--plot_time_series', help="If True, the results of the glm will be plotted as a timeseries per run.",
-                default=False)
-    parser.add_argument(
-                '-ar', '--include_all_regressors',
-                help="If you are plotting the time series, do you want the plot to contain all of the regressors?",
-                default=False)
-    parser.add_argument(
-                '--classifier',
-                help="Which classifier do you want to use? Options: linear Gaussian Naive Bayes ('gnb'), linear (binary) "
-                     "stochastic gradient descent (l-sgd), stochastic gradient descent (sgd)",
-                type=str,
-                required=True)
-    parser.add_argument(
-                '--normalize',
-                help="Should the sensitivities used for the glm be normalized by their L2 norm? True/False",
-                default=True)
-    parser.add_argument(
-                '--multimatch',
-                help="path to multimatch mean results per run. If given, the similarity measures or position and duration "
-                     "will be included in the avmovie glm analysis. Provide path including file name, "
-                     "as in 'sourcedata/multimatch/output/run_*/means.tsv'")
+    parser.add_argument('-i', '--inputfile', help="An hdf5 file of the avmovie "
+                        "data with functional ROI information, transposed",
+                        required=True)
+    parser.add_argument('--analysis', help="[If glm is computed:] Which dataset is "
+                        "the analysis based on, 'localizer' or 'avmovie'", type=str)
+    parser.add_argument('-a', '--annotation', help="Input a single, full movie"
+                        "spanning location annotation file, if you want to compute"
+                        "the glm.")
+    parser.add_argument('-e', '--eventdir', help="Input the directory name under which" 
+                        "the downsamples, run-wise event files can be found, if you " 
+                        "want to compute the glm.")
+    parser.add_argument('-bi', '--bilateral', help="If false, computation will "
+                        "be made on hemisphere-specific ROIs (i.e. left FFA, "
+                        "right FFA", default=True)
+    parser.add_argument('-g', '--glm', help="Should a glm on the sensitivities be"
+                        "computed? Defaults to True, as long as the classification"
+                        "isn't done on an only-coordinates dataset (as specified "
+                        "with the --coords flag)", default=True)
+    parser.add_argument('-ds', '--dataset', help="Specify whether the analysis \
+                        should be done on the full dataset or on the dataset \
+                        with only ROIs: 'full' or 'stripped' (default: stripped)",
+                        type=str, default='stripped')
+    parser.add_argument('-c', '--coords', help="Should coordinates be included in \
+                        the dataset? ('with-coordinates').Should a sanity check \
+                        with only coordinates without fmri data be performed? \
+                        ('only-coordinates'). Should coordinates be disregard? \
+                        ('no-coordinates') Default: 'no-coordinates'.", type=str,
+                        default='no-coordinates')
+    parser.add_argument('-o', '--output', help="Please specify an output directory"
+                        "name (absolute path) to store the analysis results", type=str)
+    parser.add_argument('-r', '--roipair', nargs='+', help="Specify two ROIs for which "
+                        "the glm timecourse should be plotted. Default for now is right"
+                        " FFA & right PPA in lateralized dataset, FFA & PPA in bilateral"
+                        " dataset. Specify as --roipair 'FFA' 'PPA'")
+    parser.add_argument('-n', '--niceplot', help="If true, the confusion matrix of the "
+                        "classification will be plotted with Matplotlib instead of build "
+                        "in functions of pymvpa.", default=False)
+    parser.add_argument('-ps', '--plot_time_series', help="If True, the results of the "
+                        "glm will be plotted as a timeseries per run.", default=False)
+    parser.add_argument('-ar', '--include_all_regressors', help="If you are plotting the "
+                        "time series, do you want the plot to contain all of the"
+                        " regressors?", default=False)
+    parser.add_argument('--classifier', help="Which classifier do you want to use? Options:"
+                        "linear Gaussian Naive Bayes ('gnb'), linear (binary) stochastic "
+                        "gradient descent (l-sgd), stochastic gradient descent (sgd)",
+                        type=str, required=True)
+    parser.add_argument('--normalize', help="Should the sensitivities used for the glm be"
+                        "normalized by their L2 norm? True/False",
+                        default=True)
+    parser.add_argument('--multimatch', help="path to multimatch mean results"
+                        "per run. If given, the similarity measures"
+                        "for position and duration will be included in the"
+                        "avmovie glm analysis. Provide path including file name,"
+                        "as in 'sourcedata/multimatch/output/run_*/means.tsv'")
+    parser.add_argument('--multimatch-only', help = 'TMPargs, if I only want to'
+                        'plot multimatch regressors', default=False)
+
 
     ## TODO: REMODNAV AND MULTIMATCH DATA as additional events
 
@@ -1287,6 +1286,10 @@ if __name__ == '__main__':
                 multimatch = False
                 print("Multimatch data is not used.")
 
+            multimatch_only = args.multimatch_only
+            if multimatch_only:
+                print('I will plot only multimatch regressors')
+
         #if the data basis is localizer...
         if analysis == 'localizer':
             print("The analysis will include a glm. Specified input "
@@ -1363,7 +1366,8 @@ if __name__ == '__main__':
                                  analysis=analysis,
                                  annot_dir=annot_dir,
                                  eventdir=eventdir,
-                                 multimatch=multimatch)
+                                 multimatch=multimatch
+                                 )
         if plot_ts:
             events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
             makeaplot_avmovie(events,
@@ -1374,7 +1378,8 @@ if __name__ == '__main__':
                               classifier=classifier,
                               bilateral=bilateral,
                               fn=results_dir,
-                              include_all_regressors=incl_regs)
+                              include_all_regressors=incl_regs,
+                              multimatch_only=multimatch_only)
     elif (glm) and (analysis == 'localizer'):
         hrf_estimates = dotheglm(sensitivities,
                                  normalize=normalize,
