@@ -767,7 +767,7 @@ def dotheglm(sensitivities,
                 'onset': events[i][0],
                 'duration': events[i][1],
                 'condition': events[i][2],
-                'amplitude': events[i][3]
+                'amplitude': 1
             }
             events_dicts.append(dic)
 
