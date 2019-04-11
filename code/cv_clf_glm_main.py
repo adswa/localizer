@@ -1083,6 +1083,44 @@ def makeaplot_avmovie(events,
                                                                                  run + 1))
 
 
+def reverse_analysis(ds,
+                     classifier,
+                     bilateral,
+                     ds_type,
+                     store_sens=False):
+    """
+    This reverses the analysis. We first do a glm on the data, and subsequently do a classification
+    on the resulting beta coefficients.
+    ds: dataset (the transposed group dataset)
+    events_dicts: dictionary of events
+
+    """
+    # step 0: transpose the data (i.e. now its non-transposed) because
+    # fit_event_hrf_model needs a non-transposed dataset
+    ds_transposed = ds.get_mapped(mv.TransposeMapper())
+    # step 1: do the glm on the data
+    hrf_estimates = mv.fit_event_hrf_model(ds_transposed,
+                                           events_dicts,
+                                           time_attr='time_coords',
+                                           condition_attr='condition',
+                                           design_kwargs=dict(drift_model='blank'),
+                                           glmfit_kwargs=dict(model='ols'),
+                                           return_model=True)
+    # step 2: get the results back into a transposed form, because we want
+    # to have time points as features & extract the betas
+    hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
+    assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
+
+    # step 3: do the classification on the betas. We do not store sensitivies (as no glm is necessary
+    # anymore)
+    sensitivities, cv = dotheclassification(hrf_estimates_transposed,
+                                            classifier,
+                                            bilateral,
+                                            ds_type,
+                                            store_sens=False)
+    return
+
+
 if __name__ == '__main__':
     import argparse
 
