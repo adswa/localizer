@@ -470,57 +470,36 @@ def get_roi_pair_idx(bilateral,
     return roi_pair_idx
 
 
-def dotheglm(sensitivities,
-             eventdir,
-             normalize,
-             analysis,
-             classifier,
-             multimatch,
-             annot_dir=None):
-
-    """dotheglm() regresses sensitivities obtained during
-    cross validation onto a functional description of the
-    paradigm.
-    If specified with normalize = True, sensitivities
-    are normed to their L2 norm.
-    The the sensitivities will be vstacked into one
-    dataset according to which classifier was used, and
-    how large the underlying dataset was.
-    The average sensitivity per roi pair will be calculated
-    with the mean_group_sample() function.
-    The resulting averaged sensitivity file will be transposed
-    with a TransposeMapper().
-    According to which analysis is run, the appropriate event
-     and if necessary annotation files
-    will be retrieved and read into the necessary data structure.
+def get_avmovietimes(mean_sens_transposed):
     """
-    if normalize == True:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
+    helper function to get TR, runonsets, and append proper
+    time_coordinates to the sensitivities based on it (necessary for the
+    avmovie analysis).
 
-        #import pdb; pdb.set_trace()
-    elif normalize == False:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
-    # if we're analyzing the avmovie data:
-    if analysis == 'avmovie':
+    Parameters:
+        mean_sens_transposed: averaged transposed sensitivities
+    """
+    # TR was not preserved/carried through in .a
+    # so we will guestimate it based on the values of time_coords
+    tc = mean_sens_transposed.sa.time_coords
+    TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
+    assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
 
-        # TR was not preserved/carried through in .a
-        # so we will guestimate it based on the values of time_coords
-        tc = mean_sens_transposed.sa.time_coords
-        TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
-        assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
+    # make time coordinates real seconds
+    mean_sens_transposed.sa.time_coords = np.arange(len(mean_sens_transposed)) * TRdirty
 
-        # make time coordinates real seconds
-        mean_sens_transposed.sa.time_coords = np.arange(len(mean_sens_transposed)) * TRdirty
+    # get runs, and runlengths in seconds
+    runs = sorted(mean_sens_transposed.UC)
+    assert runs == range(len(runs))
+    runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
+                  for run in runs]
+    runonsets = [sum(runlengths[:run]) for run in runs]
+    assert len(runs) == 8
+    # check whether chunks are increasing as well as sanity check
+    chunks = mean_sens_transposed.sa.chunks
+    assert np.all(chunks[1:] >= chunks[:-1])
+
+    return mean_sens_transposed, chunks, runs, runonsets
 
         # get runs, and runlengths in seconds
         runs = sorted(mean_sens_transposed.UC)
