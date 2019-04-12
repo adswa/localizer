@@ -1190,11 +1190,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-bi', '--bilateral',
         help="If false, computation will be made on hemisphere-specific ROIs (i.e. left FFA, right FFA",
+        action='store_true',
         default=True)
     parser.add_argument(
         '-g', '--glm',
         help="Should a glm on the sensitivities be computed? Defaults to True, as long as the classification isn't "
              "done on an only-coordinates dataset (as specified with the --coords flag)",
+        action='store_true',
         default=True)
     parser.add_argument(
         '-ds', '--dataset',
@@ -1226,10 +1228,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '-ps', '--plot_time_series',
         help="If True, the results of the glm will be plotted as a timeseries per run.",
+        action='store_true',
         default=False)
     parser.add_argument(
         '-ar', '--include_all_regressors',
         help="If you are plotting the time series, do you want the plot to contain all of the regressors?",
+        action='store_true',
         default=False)
     parser.add_argument(
         '--classifier',
@@ -1240,6 +1244,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--normalize',
         help="Should the sensitivities used for the glm be normalized by their L2 norm? True/False",
+        action='store_true',
         default=True)
     parser.add_argument(
         '--multimatch',
@@ -1249,6 +1254,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--multimatch-only',
         help = 'TMPargs, if I only want to plot multimatch regressors',
+        action='store_true',
         default=False)
 
 
@@ -1269,26 +1275,11 @@ if __name__ == '__main__':
     # get more information about what is being calculated
     ds_type = args.dataset                      # stripped --> no brain, no overlap,
                                                 #  full --> no overlap
-    if args.glm == 'True' or args.glm == True:
-        glm = True
-    elif args.glm == 'False' or args.glm == False:
-        glm = False                             # True or False
-    if args.bilateral == 'True' or args.bilateral == True:
-        bilateral = True
-    elif args.bilateral == 'False' or args.bilateral == False:
-        bilateral = False                       # True or False
-    if args.niceplot == 'True' or args.niceplot == True:
-        niceplot = True
-    elif args.niceplot == 'False' or args.niceplot == False:
-        niceplot = False                        # False or True
-    if args.normalize == 'True' or args.normalize == True:
-        normalize = True
-    elif args.normalize == 'False' or args.normalize == False:
-        normalize = False                       # True or False
-    if args.plot_time_series == 'True' or args.plot_time_series == True:
-        plot_ts = True
-    elif args.plot_time_series == 'False' or args.plot_time_series == False:
-        plot_ts = False                         # False or True
+    glm = True if args.glm else False           # True or False
+    bilateral = True if args.bilateral else False # True or False
+    niceplot = True if args.niceplot else False   # False or True
+    normalize = True if args.normalize else False # True or False
+    plot_ts = True if args.plot_time_series else False  # False or True
     incl_regs = args.include_all_regressors
     coords = args.coords                        # no-coords --> leave ds as is,
                                                 # with-coords --> incl. coords,
