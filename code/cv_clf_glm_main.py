@@ -501,13 +501,25 @@ def get_avmovietimes(mean_sens_transposed):
 
     return mean_sens_transposed, chunks, runs, runonsets
 
-        # get runs, and runlengths in seconds
-        runs = sorted(mean_sens_transposed.UC)
-        assert runs == range(len(runs))
-        runlengths = [np.max(tc[mean_sens_transposed.sa.chunks == run]) + TRdirty
-                          for run in runs]
-        runonsets = [sum(runlengths[:run]) for run in runs]
-        assert len(runs) == 8
+
+def get_events(analysis,
+               eventdir,
+               chunks=False,
+               runs=False,
+               runonsets=False,
+               annot_dir=False,
+               multimatch=False):
+    """
+    Function to extract events from the provided annotations.
+    Parameters:
+        analysis: localizer or avmovie
+        eventdir: path leading to the appropriate event file given the analysis type
+        annot_dir: path leading to the location annotation, if available
+        chunks, runs, runonsets = necessary for avmovie analysis
+
+    """
+    if analysis == 'avmovie':
+        # We're building an event file from the location annotation and the face events
 
         if multimatch:
             # glob and sort the multimatch results
@@ -519,7 +531,7 @@ def get_avmovietimes(mean_sens_transposed):
             # the onsets restart every new run from zero, we have to append the
             # runonset times:
             for idx, multimatch_file in enumerate(multimatch_files):
-                data = pd.read_csv(multimatch_file, sep = '\t')
+                data = pd.read_csv(multimatch_file, sep='\t')
                 data['onset'] += runonsets[idx]
                 multimatch_dfs.append(data)
 
@@ -552,7 +564,6 @@ def get_avmovietimes(mean_sens_transposed):
             # sort dataframes to be paranoid
             pos_sim_ev_sorted = pos_sim_ev.sort_values(by='onset')
             dur_sim_ev_sorted = dur_sim_ev.sort_values(by='onset')
-
 
         # get a list of the event files with occurances of faces
         event_files = sorted(glob(eventdir + '/*'))
@@ -659,10 +670,6 @@ def get_avmovietimes(mean_sens_transposed):
             assert np.all(pos_sim_ev_sorted.onset[1:].values >= pos_sim_ev_sorted.onset[:-1].values)
             assert np.all(dur_sim_ev_sorted.onset[1:].values >= dur_sim_ev_sorted.onset[:-1].values)
 
-        # check whether chunks are increasing as well as sanity check
-        chunks = mean_sens_transposed.sa.chunks
-        assert np.all(chunks[1:] >= chunks[:-1])
-
         # initialize the list of dicts that gets later passed to the glm
         events_dicts = []
         # This is relevant to later stack all dataframes together
@@ -749,6 +756,65 @@ def get_avmovietimes(mean_sens_transposed):
                 'amplitude': 1
             }
             events_dicts.append(dic)
+
+    return events_dicts
+
+
+def dotheglm(sensitivities,
+             eventdir,
+             normalize,
+             analysis,
+             classifier,
+             multimatch,
+             annot_dir=None):
+
+    """dotheglm() regresses sensitivities obtained during
+    cross validation onto a functional description of the
+    paradigm.
+    If specified with normalize = True, sensitivities
+    are normed to their L2 norm.
+    The the sensitivities will be vstacked into one
+    dataset according to which classifier was used, and
+    how large the underlying dataset was.
+    The average sensitivity per roi pair will be calculated
+    with the mean_group_sample() function.
+    The resulting averaged sensitivity file will be transposed
+    with a TransposeMapper().
+    According to which analysis is run, the appropriate event
+    and if necessary annotation files
+    will be retrieved and read into the necessary data structure.
+    """
+    if normalize:
+        mean_sens = norm_and_mean(norm=True,
+                                  bilateral=bilateral,
+                                  classifier=classifier,
+                                  sensitivities=sensitivities
+                                  )
+
+        #import pdb; pdb.set_trace()
+    else:
+        mean_sens = norm_and_mean(norm=False,
+                                  bilateral=bilateral,
+                                  classifier=classifier,
+                                  sensitivities=sensitivities
+                                  )
+    # transpose the averaged sensitivity dataset
+    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+
+    runs, chunks, runonsets = False, False, False
+    # if we're analyzing the avmovie data, we do need the parameters above:
+    if analysis == 'avmovie':
+        # append proper time coordinates to the sensitivities
+        mean_sens_transposed, chunks, runs, runonsets = get_avmovietimes(mean_sens_transposed)
+
+    # get an event dict
+    events_dicts = get_events(analysis=analysis,
+                           eventdir=eventdir,
+                           annot_dir = annot_dir,
+                           multimatch = multimatch,
+                           runs = runs,
+                           chunks = chunks,
+                           runonsets = runonset)
 
     # do the glm - we've earned it
     hrf_estimates = mv.fit_event_hrf_model(mean_sens_transposed,
