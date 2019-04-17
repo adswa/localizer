@@ -18,7 +18,7 @@ from utils import (bilateralize,
 
 """
 One script to rule them all:
-This script shall be able to handle all analysis.
+This script shall be able to handle all analyses.
 We will all be thanking datalad run and rerun once the analysis are
 older than a week, for noone will remember the army of commandline
 arguments specified. So in advance: Thanks, Kyle!
@@ -57,6 +57,8 @@ Command line specifications are as follows:
                     --multimatch:               Path to allruns.tsv multimatch
                                                 results. Uses Position and
                                                 Duration Similarity.
+    --reverse: Boolean, if given, we reverse - glm on data, subsequent classification
+               on resulting betas
 """
 
 def dotheclassification(ds,
