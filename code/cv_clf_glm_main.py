@@ -931,54 +931,67 @@ if __name__ == '__main__':
     # I will disable glm computation for these cases.
     if classifier == 'sgd':
         glm = False
-        print("Currently, the glm computation won't work in sgd 1-vs-all \
-            classification as we can't derive the comparison roi yet. For now,the \
-            glm computation for these cases is disabled")
+        print("Currently, the glm computation won't work in sgd 1-vs-all classification as we can't derive the "
+              "comparison roi yet. For now,the glm computation for these cases is disabled")
 
-    sensitivities, cv = dotheclassification(ds,
-                                            classifier=classifier,
-                                            bilateral=bilateral,
-                                            ds_type=ds_type,
-                                            store_sens=store_sens)
-    if (glm) and (analysis == 'avmovie'):
-        hrf_estimates = dotheglm(sensitivities,
-                                 normalize=normalize,
-                                 classifier=classifier,
-                                 analysis=analysis,
-                                 annot_dir=annot_dir,
-                                 eventdir=eventdir,
-                                 multimatch=multimatch
-                                 )
-        if plot_ts:
-            events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
-            makeaplot_avmovie(events,
-                              sensitivities,
-                              hrf_estimates,
-                              roi_pair,
-                              normalize=normalize,
-                              classifier=classifier,
-                              bilateral=bilateral,
-                              fn=results_dir,
-                              include_all_regressors=incl_regs,
-                              multimatch_only=multimatch_only)
-    elif (glm) and (analysis == 'localizer'):
-        hrf_estimates = dotheglm(sensitivities,
-                                 normalize=normalize,
-                                 analysis=analysis,
-                                 classifier=classifier,
-                                 eventdir=eventdir,
-                                 multimatch=multimatch)
-        if plot_ts:
-            # read the event files, they've been produced by the glm
-            events = pd.read_csv(results_dir + 'group_events.tsv',
-                                 sep='\t')
-            makeaplot_localizer(events,
-                                sensitivities,
-                                hrf_estimates,
-                                roi_pair,
-                                normalize=normalize,
-                                classifier=classifier,
-                                bilateral=bilateral,
-                                fn=results_dir)
+    if args.reverse:
+        # swap sequence of computations: first glm on data, then classification based on betas
+        hrf_estimates_transposed, sensitivities, cv = reverse_analysis(ds,
+                                                                       classifier,
+                                                                       bilateral,
+                                                                       results_dir,
+                                                                       ds_type,
+                                                                       eventdir,
+                                                                       annot_dir,
+                                                                       analysis,
+                                                                       store_sens=False)
+    else:
+        # do the "normal" sequence: first classification, then GLM on derived sensitivities
+        sensitivities, cv = dotheclassification(ds,
+                                                classifier=classifier,
+                                                bilateral=bilateral,
+                                                ds_type=ds_type,
+                                                store_sens=store_sens)
+        if (glm) and (analysis == 'avmovie'):
+            hrf_estimates = dotheglm(sensitivities,
+                                     normalize=normalize,
+                                     classifier=classifier,
+                                     analysis=analysis,
+                                     annot_dir=annot_dir,
+                                     eventdir=eventdir,
+                                     multimatch=multimatch
+                                     )
+            if plot_ts:
+                events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
+                makeaplot_avmovie(events,
+                                  sensitivities,
+                                  hrf_estimates,
+                                  roi_pair,
+                                  normalize=normalize,
+                                  classifier=classifier,
+                                  bilateral=bilateral,
+                                  fn=results_dir,
+                                  include_all_regressors=incl_regs,
+                                  multimatch_only=multimatch_only)
+        elif (glm) and (analysis == 'localizer'):
+            hrf_estimates = dotheglm(sensitivities,
+                                     normalize=normalize,
+                                     analysis=analysis,
+                                     classifier=classifier,
+                                     eventdir=eventdir,
+                                     results_dir = results_dir,
+                                     multimatch=False)
+            if plot_ts:
+                # read the event files, they've been produced by the glm
+                events = pd.read_csv(results_dir + 'group_events.tsv',
+                                     sep='\t')
+                makeaplot_localizer(events,
+                                    sensitivities,
+                                    hrf_estimates,
+                                    roi_pair,
+                                    normalize=normalize,
+                                    classifier=classifier,
+                                    bilateral=bilateral,
+                                    fn=results_dir)
 
 
