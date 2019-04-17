@@ -214,6 +214,7 @@ def dotheclassification(ds,
 
 def dotheglm(sensitivities,
              eventdir,
+             results_dir,
              normalize,
              analysis,
              classifier,
@@ -261,12 +262,13 @@ def dotheglm(sensitivities,
 
     # get an event dict
     events_dicts = get_events(analysis=analysis,
-                           eventdir=eventdir,
-                           annot_dir = annot_dir,
-                           multimatch = multimatch,
-                           runs = runs,
-                           chunks = chunks,
-                           runonsets = runonset)
+                              eventdir=eventdir,
+                              results_dir = results_dir,
+                              annot_dir = annot_dir,
+                              multimatch = multimatch,
+                              runs = runs,
+                              chunks = chunks,
+                              runonsets = runonsets)
 
     # do the glm - we've earned it
     hrf_estimates = mv.fit_event_hrf_model(mean_sens_transposed,
@@ -578,12 +580,17 @@ def makeaplot_avmovie(events,
                         'timecourse_avmovie_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0],
                                                                                  roi_pair[1],
                                                                                  run + 1))
+        return
 
 
 def reverse_analysis(ds,
                      classifier,
                      bilateral,
+                     results_dir,
                      ds_type,
+                     eventdir,
+                     annot_dir,
+                     analysis,
                      store_sens=False):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
