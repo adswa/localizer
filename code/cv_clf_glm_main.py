@@ -65,7 +65,8 @@ def dotheclassification(ds,
                         classifier,
                         bilateral,
                         ds_type,
-                        store_sens=True):
+                        store_sens=True,
+                        niceplot=True):
     """ Dotheclassification does the classification.
     Input: the dataset on which to perform a leave-one-out crossvalidation with a classifier
     of choice.
@@ -621,8 +622,9 @@ def reverse_analysis(ds,
                                             classifier,
                                             bilateral,
                                             ds_type,
-                                            store_sens=False)
-    return
+                                            store_sens=False,
+                                            niceplot = niceplot)
+
 
 
 if __name__ == '__main__':
@@ -951,7 +953,8 @@ if __name__ == '__main__':
                                                 classifier=classifier,
                                                 bilateral=bilateral,
                                                 ds_type=ds_type,
-                                                store_sens=store_sens)
+                                                store_sens=store_sens,
+                                                niceplot=niceplot)
         if (glm) and (analysis == 'avmovie'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
