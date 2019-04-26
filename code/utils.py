@@ -61,9 +61,12 @@ def plot_confusion(cv,
                    figsize=(9, 9),
                    vmax=None,
                    cmap='gist_heat_r',
-                   ACC=None):
+                   ACC=None,
+                   TPR=None,
+                   PPV=None):
     """ This function plots the classification results as a confusion matrix.
-    Specify ACC as cv.ca.stats.stats['mean(ACC)'] to display accuracy in the
+    Specify ACC as cv.ca.stats.stats['mean(ACC)']/TPR as cv.ca.stats.stats['TPR']/
+    PPV as cv.ca.stats.stats['PPV'] to display accuracy in the
     title. Set a new upper boundery of the scale with vmax. To save the plot,
     specify a path/with/filename.png as the fn parameter. """
 
@@ -88,7 +91,7 @@ def plot_confusion(cv,
                      yticklabels=labels)
     ax.xaxis.tick_top()
     if ACC:
-        plt.suptitle('Mean accuracy of classification: {}'.format(ACC))
+        plt.suptitle('Mean accuracy: {}, Recall: {}, Precision: {}'.format(ACC, TPR, PPV))
     plt.xticks(rotation=90)
     plt.xlabel('Predicted labels')
     plt.ylabel('Actual labels')

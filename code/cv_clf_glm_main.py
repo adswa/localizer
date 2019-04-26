@@ -193,13 +193,18 @@ def dotheclassification(ds,
     plt.savefig(results_dir + 'CV_confusion_matrix.png')
     if niceplot:
         ACC = cv.ca.stats.stats['mean(ACC)']
+        # get a balanced accuracy estimation bc of unbalanced class frequencies
+        TPR = np.mean(cv.ca.stats.stats['TPR'])
+        PPV = np.mean(cv.ca.stats.stats['PPV'])
         plot_confusion(cv,
                        labels,
                        fn=results_dir + 'CV_confusion_matrix.svg',
                        figsize=(9, 9),
                        vmax=100,
                        cmap='Blues',
-                       ACC='%.2f' % ACC)
+                       ACC='%.2f' % ACC,
+                       TPR='%.2f' %TPR,
+                       PPV='%.2f' %PPV)
     mv.h5save(results_dir + 'cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
     if store_sens:
