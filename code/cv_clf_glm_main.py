@@ -609,6 +609,25 @@ def reverse_analysis(ds,
     # step 0: transpose the data (i.e. now its non-transposed) because
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
+    assert ds_transposed.shape[0] < ds_transposed.shape[1]
+
+    # get the appropriate event file
+    ### Q: how to I get the events_dicts from the movie data without precomputed sensitivities for time_coords?
+    # extract runs, chunks, timecoords from transposed dataset... I guess getavmovie_time.. does this for me
+    chunks, runs, runonsets = False, False, False
+
+    if analysis == 'avmovie':
+        ds_transposed, chunks, runs, runonsets = get_avmovietimes(ds_transposed)
+
+    events_dicts = get_events(analysis=analysis,
+                              eventdir=eventdir,
+                              results_dir=results_dir,
+                              chunks=chunks,
+                              runs=runs,
+                              runonsets=runonsets,
+                              annot_dir=annot_dir,
+                              multimatch=multimatch)
+
     # step 1: do the glm on the data
     hrf_estimates = mv.fit_event_hrf_model(ds_transposed,
                                            events_dicts,
@@ -617,6 +636,17 @@ def reverse_analysis(ds,
                                            design_kwargs=dict(drift_model='blank'),
                                            glmfit_kwargs=dict(model='ols'),
                                            return_model=True)
+    # now what is this? I will try to figure it out from a stripped localizer dataset. We get
+    # hrf_estimates_transposed.samples.shape --> (16985, 12) (12 regressors, 16985 voxels). Question: In dotheglm,
+    # we provide mean sensitivities. here, ds should still contain all 15 subjects data (16985 voxel seem to be all
+    # combined voxels for all participants)... We need to find a way to get betas per participant and preserve
+    # participant information in the resulting dataset. - WAIT. This appears to be already the case.
+    # What we would need is a plot of the glm. what would we plot there... currently its voxels x regressors instead
+    # of time x regressors... we could do voxels grouped into ROIs on x axis
+    # .
+
+
+
     # step 2: get the results back into a transposed form, because we want
     # to have time points as features & extract the betas
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
@@ -624,6 +654,10 @@ def reverse_analysis(ds,
 
     # step 3: do the classification on the betas. We do not store sensitivies (as no glm is necessary
     # anymore)
+
+    # currently, I get one beta per regressor per voxel for the movie data.
+    # The classification accuracy is poor for the movie data set when using all regressors (.24).
+    # If I include only the face regressors it increases substantially (0.46 with an l-sgd for the stripped dataset)
     sensitivities, cv = dotheclassification(hrf_estimates_transposed,
                                             classifier,
                                             bilateral,
@@ -631,6 +665,8 @@ def reverse_analysis(ds,
                                             store_sens=False,
                                             niceplot = niceplot)
 
+    # This prints a confusion matrix. the question is, how to we interprete these results?
+    return hrf_estimates_transposed, sensitivities, cv
 
 
 if __name__ == '__main__':
