@@ -127,7 +127,7 @@ def dotheclassification(ds,
                                                                          penalty='l2',
                                                                          class_weight='balanced'
                                                                          )))
-
+    print('Set up the classifier {} for classification.'.format(classifier))
     # prepare for callback of sensitivity extraction within CrossValidation
     sensitivities = []
     if store_sens:
@@ -148,6 +148,7 @@ def dotheclassification(ds,
         cv = mv.CrossValidation(clf, mv.NFoldPartitioner(attr='participant'),
                                 errorfx=mv.mean_match_accuracy,
                                 enable_ca=['stats'])
+    print('Set up the crossvalidation, going on to compute the results.')
     results = cv(ds)
     # save classification results
 
@@ -158,6 +159,7 @@ def dotheclassification(ds,
     # first, get the labels according to the size of dataset. This is in principle
     # superflous (get_desired_labels() would exclude brain if it wasn't in the data),
     # but it'll make sure that a permitted ds_type was specified.
+    print('Plotting the confusion matrix')
     if ds_type == 'full':
         if bilateral:
             desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
