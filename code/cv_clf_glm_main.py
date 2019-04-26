@@ -251,8 +251,6 @@ def dotheglm(sensitivities,
                                   classifier=classifier,
                                   sensitivities=sensitivities
                                   )
-
-        #import pdb; pdb.set_trace()
     else:
         mean_sens = norm_and_mean(norm=False,
                                   bilateral=bilateral,
@@ -393,6 +391,7 @@ def makeaplot_localizer(events,
                         'timecourse_localizer_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0],
                                                                                    roi_pair[1],
                                                                                    run + 1))
+    return
 
 
 def makeaplot_avmovie(events,
