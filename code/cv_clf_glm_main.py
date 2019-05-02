@@ -1004,6 +1004,7 @@ if __name__ == '__main__':
                                      analysis=analysis,
                                      annot_dir=annot_dir,
                                      eventdir=eventdir,
+                                     results_dir=results_dir,
                                      multimatch=multimatch
                                      )
             if plot_ts:
