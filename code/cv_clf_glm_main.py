@@ -646,6 +646,9 @@ def reverse_analysis(ds,
     # .
 
 
+    # lets save these
+    mv.h5save(results_dir + '/' + 'sens_glm_results.hdf5', hrf_estimates)
+    print('calculated the glm, saving results')
 
     # step 2: get the results back into a transposed form, because we want
     # to have time points as features & extract the betas
