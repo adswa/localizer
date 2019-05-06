@@ -524,7 +524,7 @@ def get_events(analysis,
         allevents = pd.concat(dfs).reset_index()
 
         # save all non-face related events in an event file, just for the sake of it
-        allevents.to_csv(results_dir + '/' + 'non_face_regs.tsv', sep='\t', index=False)
+        # allevents.to_csv(results_dir + '/' + 'non_face_regs.tsv', sep='\t', index=False)
 
         # append non-faceevents to event structure for glm
         for index, row in allevents.iterrows():
@@ -536,27 +536,27 @@ def get_events(analysis,
             }
             events_dicts.append(dic)
 
-        # save this event dicts structure  as a tsv file
-        import csv
-        with open(results_dir + '/' + 'full_event_file.tsv', 'w') as tsvfile:
-            fieldnames = ['onset', 'duration', 'condition', 'amplitude']
-            writer = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
-            writer.writeheader()
-            writer.writerows(events_dicts)
-        # save this event file also as json file... can there ever be enough different files...
-        import json
-        with open(results_dir + '/' + 'allevents.json', 'w') as f:
-            json.dump(events_dicts, f)
+       # # save this event dicts structure  as a tsv file
+       # import csv
+       # with open(results_dir + '/' + 'full_event_file.tsv', 'w') as tsvfile:
+       #     fieldnames = ['onset', 'duration', 'condition', 'amplitude']
+       #     writer = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
+       #     writer.writeheader()
+       #     writer.writerows(events_dicts)
+       # # save this event file also as json file... can there ever be enough different files...
+       # import json
+       # with open(results_dir + '/' + 'allevents.json', 'w') as f:
+       #     json.dump(events_dicts, f)
 
     # if we're doing the localizer dataset, our life is so much easier
     elif analysis == 'localizer':
 
         # average onsets into one event file
         events = get_group_events(eventdir)
-        # save the event_file
-        fmt = "%10.3f\t%10.3f\t%16s\t%60s"
-        np.savetxt(results_dir + 'group_events.tsv', events, delimiter='\t', comments='',
-                   header='onset\tduration\ttrial_type\tstim_file', fmt=fmt)
+       # # save the event_file
+       # fmt = "%10.3f\t%10.3f\t%16s\t%60s"
+       # np.savetxt(results_dir + 'group_events.tsv', events, delimiter='\t', comments='',
+       #            header='onset\tduration\ttrial_type\tstim_file', fmt=fmt)
 
         # get events into dictionary
         events_dicts = []
