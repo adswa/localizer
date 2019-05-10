@@ -267,7 +267,7 @@ def get_roi_pair_idx(bilateral,
             if classifier in sgds:
                 comparison = hrf_estimates.fa.targets[j][0]
             else:
-                comparison = hrf_estimates.fa.bilat_ROIs[j][0]
+                comparison = hrf_estimates.fa.bilat_ROIs[j]
             if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
                 roi_pair_idx = j
     else:
@@ -275,7 +275,7 @@ def get_roi_pair_idx(bilateral,
             if classifier in sgds:
                 comparison = hrf_estimates.fa.targets[j][0]
             else:
-                comparison = hrf_estimates.fa.all_ROIs[j][0]
+                comparison = hrf_estimates.fa.all_ROIs[j]
             if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
                 roi_pair_idx = j
     return roi_pair_idx
