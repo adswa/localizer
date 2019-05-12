@@ -765,7 +765,7 @@ if __name__ == '__main__':
         '--normalize',
         help="Should the sensitivities used for the glm be normalized by their L2 norm? True/False",
         action='store_true',
-        default=True
+        default=False
     )
     parser.add_argument(
         '--multimatch',
