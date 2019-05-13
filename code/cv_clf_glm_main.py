@@ -545,6 +545,7 @@ def makeaplot_avmovie(events,
                 rectangle = plt.Rectangle((0, 0),
                                           0,
                                           0,
+                                          edgecolor=color,
                                           fc=color,
                                           alpha=0.5,
                                           label='_' * 0 \
