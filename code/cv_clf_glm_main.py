@@ -961,23 +961,39 @@ if __name__ == '__main__':
             print("The resulting time series plot will NOT be produced,"
                   " only the hrf estimates are saved.")
 
-        if args.roipair:
-            roi_pair = [i for i in args.roipair]
-            if len(roi_pair) != 2:
-                print('I expected exactly 2 ROIs for a comparison, specified as string'
-                      'such as in --roipair "FFA" "PPA". However, I got {}. '
-                      'I will default to plotting a comparison between '
-                      '(right) FFA and PPA.'.format(args.roipair))
-                if bilateral:
-                    roi_pair = ['FFA', 'PPA']
-                else:
-                    roi_pair = ['right FFA', 'right PPA']
-        else:
+    if args.roipair:
+        roi_pair = [i for i in args.roipair]
+        if len(roi_pair) != 2:
+            print('I expected exactly 2 ROIs for a comparison, specified as string'
+                  'such as in --roipair "FFA" "PPA". However, I got {}. '
+                  'I will default to plotting a comparison between '
+                  '(right) FFA and PPA.'.format(args.roipair))
             if bilateral:
                 roi_pair = ['FFA', 'PPA']
             else:
                 roi_pair = ['right FFA', 'right PPA']
-        print("This ROI pair is going to be used: {}".format(roi_pair))
+    else:
+        if bilateral:
+            roi_pair = ['FFA', 'PPA']
+        else:
+            roi_pair = ['right FFA', 'right PPA']
+
+    # if the ROI 'brain' is specified in the comparison, rename everything that is not
+    # the other ROI in question to really have a ROI-vs-brain distinction
+    if 'brain' in roi_pair:
+        keep_roi = [roi for roi in roi_pair if roi != 'brain']
+        if ds_type == 'stripped':
+            raise ValueError(
+                """You specified to compute a roi pair that contains the roi 'brain',
+                but you also stripped the dataset so that there is no 'brain' anymore.
+                Computer says no."""
+            )
+        if bilateral:
+            ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
+        else:
+            ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
+
+    print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
 
         ## TODO: what happens to roi pair in the event of a sgd classifier 1-vs-all?
     # currently, related to the todo, the glm computation won't work in sgd
