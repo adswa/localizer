@@ -588,7 +588,7 @@ def makeaplot_avmovie(events,
                         'timecourse_avmovie_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0],
                                                                                  roi_pair[1],
                                                                                  run + 1))
-        return
+    return
 
 
 def reverse_analysis(ds,
