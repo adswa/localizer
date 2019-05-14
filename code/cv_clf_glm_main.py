@@ -1045,7 +1045,7 @@ if __name__ == '__main__':
             ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
         else:
             ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
-
+        print('Relabeled everything but {} to "brain".'.format(keep_roi))
     print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
 
         ## TODO: what happens to roi pair in the event of a sgd classifier 1-vs-all?
