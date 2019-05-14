@@ -346,8 +346,10 @@ def makeaplot_localizer(events,
         fig, ax = plt.subplots(1, 1, figsize=[18, 10])
         colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32', '#27ae60',
                   '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
-        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[0],
-                                                                                sorted_rois[1],
+        # reverse order of ROIs in title, as weight computation for gnb is done with
+        # sorted_roi[1] - sorted_roi[0]
+        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[1],
+                                                                                sorted_rois[0],
                                                                                 run + 1),
                      fontsize='large')
         plt.xlim([0, max(mean_sens_transposed.sa.time_coords)])
@@ -475,8 +477,11 @@ def makeaplot_avmovie(events,
         fig, ax = plt.subplots(1, 1, figsize=[18, 10])
         colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32', '#27ae60',
                   '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
-        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[0],
-                                                                                sorted_rois[1],
+
+        # reverse order of ROIs in title, as weight computation for gnb is done with
+        # sorted_roi[1] - sorted_roi[0]
+        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[1],
+                                                                                sorted_rois[0],
                                                                                 run + 1),
                      fontsize='large')
         # 2 is a TR here... sorry, we are in rush
