@@ -89,6 +89,8 @@ def dotheclassification(ds,
                  prior=prior,
                  space=targets)
 
+        ## TODO: also get the classifiers estimates, but without the infs ;)
+
     elif classifier == 'sgd':
 
         # set up the dataset: If I understand the sourcecode correctly, the
