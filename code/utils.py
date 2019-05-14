@@ -280,7 +280,8 @@ def get_roi_pair_idx(bilateral,
             if (roi_pair_sorted[0] == comparison[0]) and (roi_pair_sorted[1] == comparison[1]):
                 roi_pair_idx = j
             # warn if we could not find an index at the end -- then labels might not be sorted
-            if (j == len(hrf_estimates.fa.bilat_ROIs_str) - 1)  and not roi_pair_idx:
+            # 2nd conditional needs to be None, else would fail if j = 0
+            if (j == len(hrf_estimates.fa.bilat_ROIs_str) - 1)  and (roi_pair_idx == None):
                 raise ValueError(
                     """The roi pair {} was not found in the sensitivity labels
                     in this sorted order. Check again how sensitivity estimates
@@ -296,7 +297,7 @@ def get_roi_pair_idx(bilateral,
                 comparison = hrf_estimates.fa.all_ROIs[j]
             if (roi_pair_sorted[0] == comparison[0]) and (roi_pair_sorted[1] == comparison[0]):
                 roi_pair_idx = j
-            if (j == len(hrf_estimates.fa.all_ROIs_str) - 1) and not roi_pair_idx:
+            if (j == len(hrf_estimates.fa.all_ROIs_str) - 1) and (roi_pair_idx == None):
                 raise ValueError(
                     """The roi pair {} was not found in the sensitivity labels
                     in this sorted order. Check again how sensitivity estimates
