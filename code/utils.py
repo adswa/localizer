@@ -226,7 +226,11 @@ def norm_and_mean(norm,
             # Note: All SGD based classifier wanted an explicit
             # 'target' sample attribute, therefore, this is still present
             # in the sensitivities.
-            #import pdb; pdb.set_trace()
+            # note to self: we were wondering whether we assign correct estimates to label
+            # I double checked now (May 19) that estimates here are assigned the correct estimate.
+            # references: ulabels are assigned with the help of np.unique, which returns a sorted
+            # array. Given https://github.com/PyMVPA/PyMVPA/pull/607/files#diff-bbf744fd29d7f3e4abdf7a1586a5aa95,
+            # the sensitivity calculation uses this order further lexicographically.
             sensitivities_stacked.sa['bilat_ROIs_str'] = map(lambda p: '_'.join(p),
                                                              sensitivities_stacked.sa.targets)
         else:
@@ -261,23 +265,45 @@ def get_roi_pair_idx(bilateral,
     pair decision from hrf_estimates based on the underlying dataset size and the
     used classifier."""
     sgds = ['sgd', 'l-sgd']
-
+    roi_pair_idx = None
+    # assert that we have tuples, not lists:
+    assert type(hrf_estimates.fa.bilat_ROIs[0]) == tuple
+    roi_pair_sorted = sorted(roi_pair)
     if bilateral:
-        for j in range(len(hrf_estimates.fa.bilat_ROIs_str)):
+        for j, roi in enumerate(hrf_estimates.fa.bilat_ROIs_str):
             if classifier in sgds:
+                # Todo later: check whether this is also tuple now
                 comparison = hrf_estimates.fa.targets[j][0]
             else:
                 comparison = hrf_estimates.fa.bilat_ROIs[j]
-            if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
+            # this should fail if ulabels/sensitivity labels were not sorted
+            if (roi_pair_sorted[0] == comparison[0]) and (roi_pair_sorted[1] == comparison[1]):
                 roi_pair_idx = j
+            # warn if we could not find an index at the end -- then labels might not be sorted
+            if (j == len(hrf_estimates.fa.bilat_ROIs_str) - 1)  and not roi_pair_idx:
+                raise ValueError(
+                    """The roi pair {} was not found in the sensitivity labels
+                    in this sorted order. Check again how sensitivity estimates
+                    are assigned to labels!""".format(
+                        roi_pair_sorted
+                    )
+                )
     else:
-        for j in range(len(hrf_estimates.fa.all_ROIs_str)):
+        for j, roi in enumerate(hrf_estimates.fa.all_ROIs_str):
             if classifier in sgds:
                 comparison = hrf_estimates.fa.targets[j][0]
             else:
                 comparison = hrf_estimates.fa.all_ROIs[j]
-            if (roi_pair[0] in comparison) and (roi_pair[1] in comparison):
+            if (roi_pair_sorted[0] == comparison[0]) and (roi_pair_sorted[1] == comparison[0]):
                 roi_pair_idx = j
+            if (j == len(hrf_estimates.fa.all_ROIs_str) - 1) and not roi_pair_idx:
+                raise ValueError(
+                    """The roi pair {} was not found in the sensitivity labels
+                    in this sorted order. Check again how sensitivity estimates
+                    are assigned to labels!""".format(
+                        roi_pair_sorted
+                    )
+                )
     return roi_pair_idx
 
 
