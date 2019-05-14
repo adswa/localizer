@@ -768,15 +768,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-bi', '--bilateral',
         help="If false, computation will be made on hemisphere-specific ROIs (i.e. left FFA, right FFA",
-        action='store_true',
-        default=True
+        action='store_true'
     )
     parser.add_argument(
         '-g', '--glm',
         help="Should a glm on the sensitivities be computed? Defaults to True, as long as the classification isn't "
              "done on an only-coordinates dataset (as specified with the --coords flag)",
-        action='store_true',
-        default=True
+        action='store_true'
     )
     parser.add_argument(
         '-ds', '--dataset',
@@ -807,20 +805,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '-n', '--niceplot',
         help="If true, the confusion matrix of the classification will be plotted with Matplotlib instead of build "
-             "in functions of pymvpa.",
-        default=False
+             "in functions of pymvpa."
     )
     parser.add_argument(
         '-ps', '--plot_time_series',
         help="If True, the results of the glm will be plotted as a timeseries per run.",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '-ar', '--include_all_regressors',
         help="If you are plotting the time series, do you want the plot to contain all of the regressors?",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--classifier',
@@ -832,8 +827,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--normalize',
         help="Should the sensitivities used for the glm be normalized by their L2 norm? True/False",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--multimatch',
@@ -844,14 +838,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--multimatch-only',
         help='TMPargs, if I only want to plot multimatch regressors',
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--reverse',
         help='If given, the analysis is reversed (first glm on data, subsequent classification on betas)',
-        action='store_true',
-        default=False
+        action='store_true'
     )
 
     args = parser.parse_args()
