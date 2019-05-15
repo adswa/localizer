@@ -868,7 +868,8 @@ if __name__ == '__main__':
                                                 # with-coords --> incl. coords,
                                                 # only-coords --> only coords
     classifier = args.classifier                # gnb, sgd, l-sgd --> multiclassclassifier
-
+    annot_dir = args.annotation if args.annotation else None
+    multimatch = False
     # fail early, if classifier is not appropriately specified.
     allowed_clfs = ['sgd', 'l-sgd', 'gnb']
     if classifier not in allowed_clfs:
