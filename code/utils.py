@@ -597,3 +597,67 @@ def get_events(analysis,
             events_dicts.append(dic)
 
     return events_dicts
+
+
+def buildremapper(ds_type,
+                  sub,
+                  data,
+                  rootdir = '.',
+                  anatdir = 'ses-movie/anat',
+                  rois=['FFA', 'LOC', 'PPA', 'VIS', 'EBA', 'OFA'],
+                  ):
+    """During the hdf5 dataset creation, wrapping information was lost :-(
+    This function attempts to recover this information:
+    For full datasets, we load the brain group template -- for stripped ds,
+    we build a new mask of only ROIs of the participants. Loading this as an
+    fmri_dataset back into the analysis should yield a wrapper, that we can get
+    the dataset lacking a wrapper 'get_wrapped'.
+    """
+    # TODO: define rootdir, anatdir less hardcoded
+
+    # Q: do I need to load participants brain warped into groupspace individually or is one general enough?
+    if ds_type == 'full':
+        brain = 'sourcedata/tnt/{}/bold3Tp2/in_grpbold3Tp2/head.nii.gz'.format(sub)
+        mask = 'sourcedata/tnt/{}/bold3Tp2/in_grpbold3Tp2/brain_mask.nii.gz'.format(sub)
+        #maybe take the study-template here.
+      #  brain = 'sourcedata/tnt/templates/grpbold3Tp2/brain.nii.gz'
+      #  head = 'sourcedata/tnt/templates/grpbold3Tp2/head.nii.gz'
+        dummy = mv.fmri_dataset(brain, mask=mask)
+
+    # # WIP -- still debating whether this is necessary.
+    # elif ds_type == 'stripped':
+    #     # if the dataset is stripped, we have to make a custom mask... yet pondering whether that is worth the work...
+    #     # we have to build the masks participant-wise, because each participant has custom masks per run (possibly several)...
+    #     # create a dummy outlay: (first dim of hrf estimates should be number of voxel)
+    #     all_rois_mask = np.array([['placeholder'] * data.shape[1]]).astype('S10')
+    #     for roi in rois:
+    #         if roi == 'VIS':
+    #             roi_fns = sorted(glob(rootdir + participant + anatdir + \
+    #                                       '{0}_*_mask_tmpl.nii.gz'.format(roi)))
+    #         else:
+    #             if bilateral:
+    #                 # if its bilateralized we don't need to segregate based on hemispheres
+    #
+    #             else:
+    #                 # we need to segregate based on hemispheres
+    #                 left_roi_fns = sorted(glob(rootdir + participant + anatdir + \
+    #                                            'l{0}*mask_tmpl.nii.gz'.format(roi)))
+    #                 right_roi_fns = sorted(glob(rootdir + participant + anatdir + \
+    #                                             'r{0}*mask_tmpl.nii.gz'.format(roi)))
+    #                 roi_fns = left_roi_fns + right_roi_fns
+    #             if len(roi_fns) > 1:
+    #                 # if there are more than 1 mask, combine them
+    #                 roi_mask = np.sum([mv.fmri_dataset(roi_fn, mask=mask_fn).samples for roi_fn in roi_fns], axis=0)
+    #                 # Set any voxels that might exceed 1 to 1
+    #                 roi_mask = np.where(roi_mask > 0, 1, 0)
+    #             elif len(roi_fns) == 0:
+    #                 # if there are no masks, we get zeros
+    #                 print("ROI {0} does not exist for participant {1}; appending all zeros".format(roi, participant))
+    #                 roi_mask = np.zeros((1, data_ds.shape[1]))
+    #             elif len(roi_fns) == 1:
+    #                 roi_mask = mv.fmri_dataset(roi_fns[0], mask=mask_fn).samples
+    #                 ## continue here
+
+    # now that we have a dummy ds with a wrapper, we can project the betas into a brain --> map2nifti
+    # does that. If we save that, we should be able to load it into FSL.
+    return mv.map2nifti(dummy, data)

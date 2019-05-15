@@ -89,6 +89,8 @@ def dotheclassification(ds,
                  prior=prior,
                  space=targets)
 
+        ## TODO: also get the classifiers estimates, but without the infs ;)
+
     elif classifier == 'sgd':
 
         # set up the dataset: If I understand the sourcecode correctly, the
@@ -667,6 +669,60 @@ def reverse_analysis(ds,
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
 
+    # find out what is happening in a given ROI. For this, use the transposed hrf_estimates,
+    # and project them into a brain.
+    print('going on to project resulting betas back into brain...')
+    subs = np.unique(hrf_estimates_transposed.sa.participant)
+    regs = hrf_estimates_transposed.fa.condition
+    assert len(subs) > 0
+    from collections import OrderedDict
+    result_maps = OrderedDict()
+    # for sub in subs:
+    # for now one sub
+    for sub in subs:
+        print('...for subject {}...'.format(sub))
+        result_maps[sub] = OrderedDict()
+        # subset to participants dataframe
+        data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
+                          fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
+                          sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
+        # loop over regressors
+        for idx, reg in enumerate(regs):
+            result_map = buildremapper(ds_type,
+                                       sub,
+                                       data.samples.T[idx], # we select one beta vector per regressor
+                                       )
+            # populate a nested dict with the resulting nifti images
+            # this guy has one nifti image per regressor for each subject
+            result_maps[sub][reg] = result_map
+
+        # Those result maps can be quick-and-dirty-plotted with
+        # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
+        # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
+        # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
+
+
+        # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
+        # how do we know which regressors have highest betas for given ROI? averaging?
+        # hrf_estimates.samples[0][hrf_estimates.fa.bilat_ROIs == 'FFA'] gives a beta vector for one reg
+        # [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
+        # FFA_body: 1.146           PPA: 0.191
+        # FFA body first: 2.929     PPA: 0.955
+        # FFA face: 1.573           PPA: 0.089
+        # FFA face first: 3.191     PPA: 0.025
+        # FFA house: 0.638          PPA: 1.06
+        # FFA house first: 2.270    PPA: 2.60
+        # FFA object: 0.735         PPA: 0.32
+        # FFA object first: 2.17    PPA: 1.27
+        # FFA scene: 0.405          PPA: 1.26
+        # FFA scene first: 1.405    PPA; 3.959
+        # FFA scramnle: 0.285       PPA: 0.31
+        # FFA scramble first: 0.521 PPA: 1.28
+        from collections import OrderedDict
+        betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
+        avmovie_PPA = OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
+        result_maps.append(result_map)
+
     # step 3: do the classification on the betas. We do not store sensitivies (as no glm is necessary
     # anymore)
 
@@ -712,15 +768,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-bi', '--bilateral',
         help="If false, computation will be made on hemisphere-specific ROIs (i.e. left FFA, right FFA",
-        action='store_true',
-        default=True
+        action='store_true'
     )
     parser.add_argument(
         '-g', '--glm',
         help="Should a glm on the sensitivities be computed? Defaults to True, as long as the classification isn't "
              "done on an only-coordinates dataset (as specified with the --coords flag)",
-        action='store_true',
-        default=True
+        action='store_true'
     )
     parser.add_argument(
         '-ds', '--dataset',
@@ -751,20 +805,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '-n', '--niceplot',
         help="If true, the confusion matrix of the classification will be plotted with Matplotlib instead of build "
-             "in functions of pymvpa.",
-        default=False
+             "in functions of pymvpa."
     )
     parser.add_argument(
         '-ps', '--plot_time_series',
         help="If True, the results of the glm will be plotted as a timeseries per run.",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '-ar', '--include_all_regressors',
         help="If you are plotting the time series, do you want the plot to contain all of the regressors?",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--classifier',
@@ -776,8 +827,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--normalize',
         help="Should the sensitivities used for the glm be normalized by their L2 norm? True/False",
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--multimatch',
@@ -788,14 +838,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--multimatch-only',
         help='TMPargs, if I only want to plot multimatch regressors',
-        action='store_true',
-        default=False
+        action='store_true'
     )
     parser.add_argument(
         '--reverse',
         help='If given, the analysis is reversed (first glm on data, subsequent classification on betas)',
-        action='store_true',
-        default=False
+        action='store_true'
     )
 
     args = parser.parse_args()
@@ -998,7 +1046,7 @@ if __name__ == '__main__':
             ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
         else:
             ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
-
+        print('Relabeled everything but {} to "brain".'.format(keep_roi))
     print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
 
         ## TODO: what happens to roi pair in the event of a sgd classifier 1-vs-all?
