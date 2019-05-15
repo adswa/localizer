@@ -700,8 +700,6 @@ def reverse_analysis(ds,
         # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
         # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
         # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
-
-
         # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
         # how do we know which regressors have highest betas for given ROI? averaging?
         # hrf_estimates.samples[0][hrf_estimates.fa.bilat_ROIs == 'FFA'] gives a beta vector for one reg
@@ -718,10 +716,9 @@ def reverse_analysis(ds,
         # FFA scene first: 1.405    PPA; 3.959
         # FFA scramnle: 0.285       PPA: 0.31
         # FFA scramble first: 0.521 PPA: 1.28
-        from collections import OrderedDict
-        betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
-        avmovie_PPA = OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
-        result_maps.append(result_map)
+        #from collections import OrderedDict
+        #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
+        # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
 
     # step 3: do the classification on the betas. We do not store sensitivies (as no glm is necessary
     # anymore)
