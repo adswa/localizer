@@ -14,7 +14,8 @@ from utils import (bilateralize,
                    get_voxel_coords,
                    norm_and_mean,
                    plot_confusion,
-                   strip_ds)
+                   strip_ds,
+                   buildremapper)
 
 """
 One script to rule them all:
