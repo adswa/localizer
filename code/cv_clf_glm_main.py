@@ -683,6 +683,7 @@ def reverse_analysis(ds,
     for sub in subs:
         print('...for subject {}...'.format(sub))
         result_maps[sub] = OrderedDict()
+        import pdb; pdb.set_trace()
         # subset to participants dataframe
         data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
                           fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
