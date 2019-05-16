@@ -926,7 +926,7 @@ if __name__ == '__main__':
               ' will be done if this option is specified.')
 
     # if we are running a glm, do I have everything I need for the computation?
-    if glm:
+    if glm or args.reverse:
         # which dataset am I being run on?
         if args.analysis:
             analysis = args.analysis
