@@ -15,7 +15,7 @@
 	url = medusa.ovgu.de:/home/data/psyinf/forrest_gump/collection/comp_stim_features
 [submodule "sourcedata/eyetrack"]
 	path = sourcedata/eyetrack
-	url = adina@medusa.ovgu.de:/home/data/psyinf/scratch/studyforrest-data-eyemovementlabels
+	url = medusa.ovgu.de:/home/data/psyinf/scratch/studyforrest-data-eyemovementlabels
 [submodule "sourcedata/multimatch"]
 	path = sourcedata/multimatch
-	url = adina@medusa.ovgu.de:/home/adina/multimatch_forrest
+	url = medusa.ovgu.de:/home/adina/multimatch_forrest
