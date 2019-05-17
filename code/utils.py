@@ -701,7 +701,7 @@ def avg_trans_sens(normalize,
         print("""
         The specified order of ROIs was {}, but the internal sensitivity computation
         uses {}. To avoid interpretation difficulties, the sensitivity signs get flipped.
-                """.format(roi_pair, np.unique(roi_pair)))
+                """.format(roi_pair, [np.unique(roi_pair)[1], np.unique(roi_pair)[0]]))
         mean_sens = flip_sensitivities(mean_sens)
     # transpose the averaged sensitivity dataset
     mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
