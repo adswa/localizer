@@ -204,7 +204,7 @@ def dotheclassification(ds,
         PPV = np.mean(cv.ca.stats.stats['PPV'])
         plot_confusion(cv,
                        labels,
-                       fn=results_dir + 'CV_confusion_matrix.png',
+                       fn=results_dir + 'CV_confusion_matrix.svg',
                        figsize=(9, 9),
                        vmax=100,
                        cmap='Blues',
