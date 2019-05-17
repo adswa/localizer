@@ -661,3 +661,48 @@ def buildremapper(ds_type,
     # now that we have a dummy ds with a wrapper, we can project the betas into a brain --> map2nifti
     # does that. If we save that, we should be able to load it into FSL.
     return mv.map2nifti(dummy, data)
+
+
+def flip_sensitivities(sensitivities):
+    """
+    The sensitivities are computed in non-changeable order, so if we don't want to confuse people,
+    we flip the sign when we display the ROIs in an order different from during sensitivity
+    computation.
+    """
+    return mv.Dataset(sensitivities.samples * -1,
+                      sa=sensitivities.sa,
+                      fa=sensitivities.fa)
+
+
+def avg_trans_sens(normalize,
+                   bilateral,
+                   classifier,
+                   sensitivities,
+                   roi_pair):
+    """
+    Average sensitivities, normalize then -- if applicable --,
+    flip the sign -- if necessary.
+    """
+    if normalize:
+        mean_sens = norm_and_mean(norm=True,
+                                  bilateral=bilateral,
+                                  classifier=classifier,
+                                  sensitivities=sensitivities
+                                  )
+    else:
+        mean_sens = norm_and_mean(norm=False,
+                                  bilateral=bilateral,
+                                  classifier=classifier,
+                                  sensitivities=sensitivities
+                                  )
+    # if the roi pair order is the reverse of that during sensitivity calculation
+    if (roi_pair[0] == np.unique(roi_pair)[1]) & (roi_pair[1] == np.unique(roi_pair)[0]):
+        # flip the sign
+        print("""
+        The specified order of ROIs was {}, but the internal sensitivity computation
+        uses {}. To avoid interpretation difficulties, the sensitivity signs get flipped.
+                """.format(roi_pair, np.unique(roi_pair)))
+        mean_sens = flip_sensitivities(mean_sens)
+    # transpose the averaged sensitivity dataset
+    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    return mean_sens_transposed

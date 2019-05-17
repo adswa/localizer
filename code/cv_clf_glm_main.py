@@ -15,7 +15,8 @@ from utils import (bilateralize,
                    norm_and_mean,
                    plot_confusion,
                    strip_ds,
-                   buildremapper)
+                   buildremapper,
+                   avg_trans_sens)
 
 """
 One script to rule them all:
@@ -248,20 +249,12 @@ def dotheglm(sensitivities,
     and if necessary annotation files
     will be retrieved and read into the necessary data structure.
     """
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
 
     runs, chunks, runonsets = False, False, False
     # if we're analyzing the avmovie data, we do need the parameters above:
@@ -309,21 +302,12 @@ def makeaplot_localizer(events,
     """
     import matplotlib.pyplot as plt
 
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
-
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
     # some parameters
     # get the conditions, and reorder them into a nice order
     block_design = sorted(np.unique(events['trial_type']))
@@ -427,20 +411,12 @@ def makeaplot_avmovie(events,
     """
     import matplotlib.pyplot as plt
 
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
 
     chunks = mean_sens_transposed.sa.chunks
     assert np.all(chunks[1:] >= chunks[:-1])
