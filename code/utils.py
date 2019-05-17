@@ -706,3 +706,14 @@ def avg_trans_sens(normalize,
     # transpose the averaged sensitivity dataset
     mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
     return mean_sens_transposed
+
+
+def get_glm_model_contrast(hrf_estimates, contrast):
+    """
+    specify parameters here
+    contrasts is a dict or OrderedDict
+    """
+    weighted_regressors = [(hrf_estimates.sa.regressors[hrf_estimates.sa.condition == c] * v)
+                           for c, v in contrast.items()]
+    custom_model = np.sum(weighted_regressors, axis=0)
+    return custom_model
