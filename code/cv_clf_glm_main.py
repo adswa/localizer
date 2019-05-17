@@ -296,6 +296,8 @@ def makeaplot_localizer(events,
                         classifier,
                         bilateral,
                         fn=True,
+                        reverse=False,
+                        model_contrast=False,
                         ):
     """
     This produces a time series plot for the roi class comparison specified in
@@ -368,6 +370,11 @@ def makeaplot_localizer(events,
             del colors[0]
 
         times = roi_sens_ds.sa.time_coords[run_startidx[run]:run_endidx[run]]
+        if reverse:
+            # if we get here from the reverse analysis, plot the model contrast, too
+            ax.plot(times, model_contrast[0][run_startidx[run]:run_endidx[run]],
+                    color='blue',
+                    linestyle='dashed')
 
         ax.plot(times, roi_sens_ds.samples[run_startidx[run]:run_endidx[run]], '-', color='black', lw=1.0)
         glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], roi_pair_idx]
@@ -391,7 +398,10 @@ def makeaplot_avmovie(events,
                       classifier,
                       fn=None,
                       include_all_regressors=False,
-                      multimatch_only=False):
+                      multimatch_only=False,
+                      reverse=False,
+                      model_contrast=False,
+                      ):
     """
     This produces a time series plot for the roi class comparison specified in
     roi_pair such as roi_pair = ['left FFA', 'left PPA'].
@@ -554,7 +564,11 @@ def makeaplot_avmovie(events,
                 plt.legend(loc=1)
                 # plt.axis('scaled')
                 # del colors[0]
-
+        if reverse:
+            # if we get here from the reverse analysis, plot the model contrast, too
+            ax.plot(times, model_contrast[0][run_startidx[run]:run_endidx[run]],
+                    color='blue',
+                    linestyle='dashed')
         times = roi_sens_ds.sa.time_coords[run_onset:run_offset]
 
         ax.plot(times, roi_sens_ds.samples[run_onset:run_offset], '-', color='black', lw=1.0)
