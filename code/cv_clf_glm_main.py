@@ -642,7 +642,7 @@ def reverse_analysis(ds,
     # What we would need is a plot of the glm. what would we plot there... currently its voxels x regressors instead
     # of time x regressors... we could do voxels grouped into ROIs on x axis
     # .
-
+    # TODO: save regressors in here seperately
 
     # lets save these
     mv.h5save(results_dir + '/' + 'sens_glm_results.hdf5', hrf_estimates)
@@ -650,35 +650,40 @@ def reverse_analysis(ds,
 
     # step 2: get the results back into a transposed form, because we want
     # to have time points as features & extract the betas
+    # keep the time point information, necessary for classification
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
+    # append the time coordinates again
 
     # find out what is happening in a given ROI. For this, use the transposed hrf_estimates,
-    # and project them into a brain.
-    print('going on to project resulting betas back into brain...')
-    subs = np.unique(hrf_estimates_transposed.sa.participant)
-    regs = hrf_estimates_transposed.fa.condition
-    assert len(subs) > 0
-    from collections import OrderedDict
-    result_maps = OrderedDict()
-    # for sub in subs:
-    # for now one sub
-    for sub in subs:
-        print('...for subject {}...'.format(sub))
-        result_maps[sub] = OrderedDict()
-        # subset to participants dataframe
-        data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
-                          fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
-                          sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
-        # loop over regressors
-        for idx, reg in enumerate(regs):
-            result_map = buildremapper(ds_type,
-                                       sub,
-                                       data.samples.T[idx], # we select one beta vector per regressor
-                                       )
-            # populate a nested dict with the resulting nifti images
-            # this guy has one nifti image per regressor for each subject
-            result_maps[sub][reg] = result_map
+    # and project them into a brain. I'll saveguard this function for now, because there is still
+    # the unsolved overlap issue...
+    project_beta = False
+    if project_beta:
+        print('going on to project resulting betas back into brain...')
+        subs = np.unique(hrf_estimates_transposed.sa.participant)
+        regs = hrf_estimates_transposed.fa.condition
+        assert len(subs) > 0
+        from collections import OrderedDict
+        result_maps = OrderedDict()
+        # for sub in subs:
+        # for now one sub
+        for sub in subs:
+            print('...for subject {}...'.format(sub))
+            result_maps[sub] = OrderedDict()
+            # subset to participants dataframe
+            data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
+                              fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
+                              sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
+            # loop over regressors
+            for idx, reg in enumerate(regs):
+                result_map = buildremapper(ds_type,
+                                           sub,
+                                           data.samples.T[idx], # we select one beta vector per regressor
+                                           )
+                # populate a nested dict with the resulting nifti images
+                # this guy has one nifti image per regressor for each subject
+                result_maps[sub][reg] = result_map
 
         # Those result maps can be quick-and-dirty-plotted with
         # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
@@ -708,8 +713,7 @@ def reverse_analysis(ds,
     # anymore)
 
     # currently, I get one beta per regressor per voxel for the movie data.
-    # The classification accuracy is poor for the movie data set when using all regressors (.24).
-    # If I include only the face regressors it increases substantially (0.46 with an l-sgd for the stripped dataset)
+    # how do I compute the sensitivities? there is no time_coords...
     sensitivities, cv = dotheclassification(hrf_estimates_transposed,
                                             classifier,
                                             bilateral,
