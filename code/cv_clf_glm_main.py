@@ -15,7 +15,8 @@ from utils import (bilateralize,
                    norm_and_mean,
                    plot_confusion,
                    strip_ds,
-                   buildremapper)
+                   buildremapper,
+                   avg_trans_sens)
 
 """
 One script to rule them all:
@@ -248,20 +249,12 @@ def dotheglm(sensitivities,
     and if necessary annotation files
     will be retrieved and read into the necessary data structure.
     """
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
 
     runs, chunks, runonsets = False, False, False
     # if we're analyzing the avmovie data, we do need the parameters above:
@@ -309,21 +302,12 @@ def makeaplot_localizer(events,
     """
     import matplotlib.pyplot as plt
 
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
-
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
     # some parameters
     # get the conditions, and reorder them into a nice order
     block_design = sorted(np.unique(events['trial_type']))
@@ -342,17 +326,12 @@ def makeaplot_localizer(events,
                                     hrf_estimates)
     roi_betas_ds = hrf_estimates[:, roi_pair_idx]
     roi_sens_ds = mean_sens_transposed[:, roi_pair_idx]
-    # sort the roi pair in alphabetical order. This is how it is done internally to
-    # assign sensitivities, and we want to match this in labeling.
-    sorted_rois = sorted([roi_pair[0], roi_pair[1]])
     for run in runs:
         fig, ax = plt.subplots(1, 1, figsize=[18, 10])
         colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32', '#27ae60',
                   '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
-        # reverse order of ROIs in title, as weight computation for gnb is done with
-        # sorted_roi[1] - sorted_roi[0]
-        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[1],
-                                                                                sorted_rois[0],
+        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(roi_pair[0],
+                                                                                roi_pair[1],
                                                                                 run + 1),
                      fontsize='large')
         plt.xlim([0, max(mean_sens_transposed.sa.time_coords)])
@@ -396,8 +375,8 @@ def makeaplot_localizer(events,
         plt.title('R squared: %.2f' % model_fit)
         if fn:
             plt.savefig(results_dir +
-                        'timecourse_localizer_glm_sens_{}_vs_{}_run-{}.svg'.format(sorted_rois[0],
-                                                                                   sorted_rois[1],
+                        'timecourse_localizer_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0],
+                                                                                   roi_pair[1],
                                                                                    run + 1))
     return
 
@@ -427,20 +406,12 @@ def makeaplot_avmovie(events,
     """
     import matplotlib.pyplot as plt
 
-    if normalize:
-        mean_sens = norm_and_mean(norm=True,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    else:
-        mean_sens = norm_and_mean(norm=False,
-                                  bilateral=bilateral,
-                                  classifier=classifier,
-                                  sensitivities=sensitivities
-                                  )
-    # transpose the averaged sensitivity dataset
-    mean_sens_transposed = mean_sens.get_mapped(mv.TransposeMapper())
+    norm = True if normalize else False
+    mean_sens_transposed = avg_trans_sens(norm,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
 
     chunks = mean_sens_transposed.sa.chunks
     assert np.all(chunks[1:] >= chunks[:-1])
@@ -473,18 +444,12 @@ def makeaplot_avmovie(events,
         sorted(zip(roi_betas_ds.sa.condition, roi_betas_ds.samples[:, 0]),
                key=lambda x: x[1]))
     block_design = list(block_design_betas)
-    # sort the roi pair in alphabetical order. This is how it is done internally to
-    # assign sensitivities, and we want to match this in labeling.
-    sorted_rois = sorted([roi_pair[0], roi_pair[1]])
     for run in runs:
         fig, ax = plt.subplots(1, 1, figsize=[18, 10])
         colors = ['#7b241c', '#e74c3c', '#154360', '#3498db', '#145a32', '#27ae60',
                   '#9a7d0a', '#f4d03f', '#5b2c6f', '#a569bd', '#616a6b', '#ccd1d1']
-
-        # reverse order of ROIs in title, as weight computation for gnb is done with
-        # sorted_roi[1] - sorted_roi[0]
-        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(sorted_rois[1],
-                                                                                sorted_rois[0],
+        plt.suptitle('Timecourse of sensitivities, {} versus {}, run {}'.format(roi_pair[0],
+                                                                                roi_pair[1],
                                                                                 run + 1),
                      fontsize='large')
         # 2 is a TR here... sorry, we are in rush
@@ -599,8 +564,8 @@ def makeaplot_avmovie(events,
         plt.title('R squared: %.2f' % model_fit)
         if fn:
             plt.savefig(results_dir +
-                        'timecourse_avmovie_glm_sens_{}_vs_{}_run-{}.svg'.format(sorted_rois[0],
-                                                                                 sorted_rois[1],
+                        'timecourse_avmovie_glm_sens_{}_vs_{}_run-{}.svg'.format(roi_pair[0],
+                                                                                 roi_pair[1],
                                                                                  run + 1))
     return
 
