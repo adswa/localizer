@@ -648,7 +648,6 @@ def reverse_analysis(ds,
     for sub in subs:
         print('...for subject {}...'.format(sub))
         result_maps[sub] = OrderedDict()
-        #import pdb; pdb.set_trace()
         # subset to participants dataframe
         data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
                           fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
@@ -859,10 +858,13 @@ if __name__ == '__main__':
     # If the dataset should be stripped, apply
     # 'full' stripping. If not, apply only 'sparse' stripping
     # that would exclude any overlap in the data.
-    if ds_type == 'stripped':
-        ds = strip_ds(ds, order='full')
-    else:
-        ds = strip_ds(ds, order='sparse')
+    if not args.reverse:
+        # TODO: reversing the analysis but stripping anything from it (even
+        # overlap) would make a new mapper necessary... what to do?
+        if ds_type == 'stripped':
+            ds = strip_ds(ds, order='full')
+        else:
+            ds = strip_ds(ds, order='sparse')
 
     # combine ROIs of the hemispheres
     if bilateral:
