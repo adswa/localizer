@@ -16,7 +16,8 @@ from utils import (bilateralize,
                    plot_confusion,
                    strip_ds,
                    buildremapper,
-                   avg_trans_sens)
+                   avg_trans_sens,
+                   get_glm_model_contrast)
 
 """
 One script to rule them all:
@@ -578,13 +579,16 @@ def reverse_analysis(ds,
                      eventdir,
                      annot_dir,
                      analysis,
-                     store_sens=False):
+                     store_sens=True,
+                     project_beta=False,
+                     plot_tc=True,
+                     contrast=None):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
     on the resulting beta coefficients.
     ds: dataset (the transposed group dataset)
     events_dicts: dictionary of events
-
+    contrast: dictionary of regressors (exact names please) and a weight
     """
     # step 0: transpose the data (i.e. now its non-transposed) because
     # fit_event_hrf_model needs a non-transposed dataset
@@ -699,7 +703,92 @@ def reverse_analysis(ds,
                                             store_sens=False,
                                             niceplot = niceplot)
 
-    # This prints a confusion matrix. the question is, how to we interprete these results?
+    if plot_tc:
+        # we want to plot on top of the existing plots -
+        # that unfortunately means that we need to do the
+        # original analysis, too:
+        # do the "normal" sequence: first classification, then GLM on derived sensitivities
+        orig_sensitivities, orig_cv = dotheclassification(ds,
+                                                          classifier=classifier,
+                                                          bilateral=bilateral,
+                                                          ds_type=ds_type,
+                                                          store_sens=True,
+                                                          niceplot=niceplot)
+
+        if analysis == 'localizer':
+            # we've got shit to plot
+            events = pd.read_csv(results_dir + 'group_events.tsv',
+                                 sep='\t')
+
+            if not contrast:
+                from collections import OrderedDict
+                contrast = OrderedDict()
+                # this is the "strict" FFA contrast: Faces against everything else
+                contrast['face'] = 1
+                contrast['body'] = -0.2
+                contrast['house'] = -0.2
+                contrast['scene'] = -0.2
+                contrast['scramble'] = -0.2
+                contrast['object'] = -0.2
+            hrf_contrast = get_glm_model_contrast(hrf_estimates,
+                                                  contrast=contrast)
+
+            orig_hrf_estimates = dotheglm(orig_sensitivities,
+                                          normalize=normalize,
+                                          analysis=analysis,
+                                          classifier=classifier,
+                                          eventdir=eventdir,
+                                          results_dir=results_dir,
+                                          multimatch=False)
+
+            makeaplot_localizer(events,
+                                orig_sensitivities,
+                                orig_hrf_estimates,
+                                roi_pair,
+                                normalize=normalize,
+                                classifier=classifier,
+                                bilateral=bilateral,
+                                fn=results_dir,
+                                reverse=True,
+                                model_contrast=hrf_contrast,
+                                )
+
+        elif analysis == 'avmovie':
+            if not contrast:
+                from collections import OrderedDict
+                contrast = OrderedDict()
+                # lets build a face regressor
+                contrast['face'] = 0.5
+                contrast['many_faces'] = 0.5
+
+            hrf_contrast = get_glm_model_contrast(hrf_estimates,
+                                                  contrast=contrast)
+
+            orig_hrf_estimates = dotheglm(orig_sensitivities,
+                                          normalize=normalize,
+                                          classifier=classifier,
+                                          analysis=analysis,
+                                          annot_dir=annot_dir,
+                                          eventdir=eventdir,
+                                          results_dir=results_dir,
+                                          multimatch=multimatch
+                                          )
+
+            events = pd.read_csv(results_dir + 'full_event_file.tsv',
+                                 sep='\t')
+            makeaplot_avmovie(events,
+                              orig_sensitivities,
+                              orig_hrf_estimates,
+                              roi_pair,
+                              normalize=normalize,
+                              classifier=classifier,
+                              bilateral=bilateral,
+                              fn=results_dir,
+                              include_all_regressors=incl_regs,
+                              reverse=True,
+                              model_contrast=hrf_contrast,
+                              )
+
     return hrf_estimates_transposed, sensitivities, cv
 
 
