@@ -696,7 +696,7 @@ def avg_trans_sens(normalize,
                                   sensitivities=sensitivities
                                   )
     # if the roi pair order is the reverse of that during sensitivity calculation
-    if (roi_pair[0] == np.unique(roi_pair)[1]) & (roi_pair[1] == np.unique(roi_pair)[0]):
+    if (roi_pair[0] == np.unique(roi_pair)[0]) & (roi_pair[1] == np.unique(roi_pair)[1]):
         # flip the sign
         print("""
         The specified order of ROIs was {}, but the internal sensitivity computation
