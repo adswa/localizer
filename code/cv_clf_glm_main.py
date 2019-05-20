@@ -236,7 +236,7 @@ def dotheglm(sensitivities,
              normalize,
              analysis,
              classifier,
-             multimatch,
+             multimatch=False,
              annot_dir=None):
 
     """dotheglm() regresses sensitivities obtained during
@@ -273,7 +273,7 @@ def dotheglm(sensitivities,
                               eventdir=eventdir,
                               results_dir = results_dir,
                               annot_dir = annot_dir,
-                              multimatch = multimatch,
+                              multimatch = False,
                               runs = runs,
                               chunks = chunks,
                               runonsets = runonsets)
@@ -629,7 +629,7 @@ def reverse_analysis(ds,
                               runs=runs,
                               runonsets=runonsets,
                               annot_dir=annot_dir,
-                              multimatch=multimatch)
+                              multimatch=False)
 
     # step 1: do the glm on the data
     hrf_estimates = mv.fit_event_hrf_model(ds_transposed,
@@ -794,7 +794,7 @@ def reverse_analysis(ds,
                                           annot_dir=annot_dir,
                                           eventdir=eventdir,
                                           results_dir=results_dir,
-                                          multimatch=multimatch
+                                          multimatch=False
                                           )
 
             events = pd.read_csv(results_dir + 'full_event_file.tsv',
@@ -1048,7 +1048,7 @@ if __name__ == '__main__':
                 multimatch = False
                 print("Multimatch data is not used.")
 
-            multimatch_only = args.multimatch_only
+            multimatch_only = False # args.multimatch_only
             if multimatch_only:
                 print('I will plot only multimatch regressors')
 
@@ -1163,7 +1163,7 @@ if __name__ == '__main__':
                                      annot_dir=annot_dir,
                                      eventdir=eventdir,
                                      results_dir=results_dir,
-                                     multimatch=multimatch
+                                     multimatch=False
                                      )
             if plot_ts:
                 events = pd.read_csv(results_dir + 'full_event_file.tsv', sep='\t')
@@ -1176,7 +1176,7 @@ if __name__ == '__main__':
                                   bilateral=bilateral,
                                   fn=results_dir,
                                   include_all_regressors=incl_regs,
-                                  multimatch_only=multimatch_only)
+                                  multimatch_only=False)
         elif (glm) and (analysis == 'localizer'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
