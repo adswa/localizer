@@ -569,12 +569,12 @@ def makeaplot_avmovie(events,
                 plt.legend(loc=1)
                 # plt.axis('scaled')
                 # del colors[0]
+        times = roi_sens_ds.sa.time_coords[run_onset:run_offset]
         if reverse:
             # if we get here from the reverse analysis, plot the model contrast, too
-            ax.plot(times, model_contrast[0][run_startidx[run]:run_endidx[run]],
+            ax.plot(times, model_contrast[run_onset:run_offset],
                     color='blue',
                     linestyle='dashed')
-        times = roi_sens_ds.sa.time_coords[run_onset:run_offset]
 
         ax.plot(times, roi_sens_ds.samples[run_onset:run_offset], '-', color='black', lw=1.0)
         # plot glm model results
@@ -723,9 +723,27 @@ def reverse_analysis(ds,
                                             classifier,
                                             bilateral,
                                             ds_type,
-                                            store_sens=False,
-                                            niceplot = niceplot)
+                                            store_sens=True,
+                                            niceplot = niceplot,
+                                            reverse=True)
 
+    mean_sens_transposed = avg_trans_sens(normalize=False,
+                                          bilateral=bilateral,
+                                          classifier=classifier,
+                                          sensitivities=sensitivities,
+                                          roi_pair=roi_pair)
+    # mean_sens_transposed now has (70, 15) shaped samples, the regressors, and the ROIs.
+    # I should be able to extract the index of the ROI pair in question
+    roi_pair_idx = get_roi_pair_idx(bilateral,
+                                    classifier,
+                                    roi_pair,
+                                    mean_sens_transposed,
+                                    )
+    # If I multiply the regressors with sensitivities corresponding to that index, and sum over axis=1,
+    # I should get an "optimal" contrast? at least something like a time course...
+    ## WELL IT LOOKS LIKE BULLSHIT :D
+    opt_contrast = np.sum(mean_sens_transposed.samples[:,roi_pair_idx] * mean_sens_transposed.sa.regressors.T, axis=1)
+    zscored_contrast = (opt_contrast - np.mean(opt_contrast)) / np.std(opt_contrast)
     if plot_tc:
         # we want to plot on top of the existing plots -
         # that unfortunately means that we need to do the
@@ -785,7 +803,7 @@ def reverse_analysis(ds,
                 contrast['many_faces'] = 0.5
 
             hrf_contrast = get_glm_model_contrast(hrf_estimates,
-                                                  contrast=contrast)
+                                                  contrast=contrast)[0]
 
             orig_hrf_estimates = dotheglm(orig_sensitivities,
                                           normalize=normalize,
@@ -809,7 +827,7 @@ def reverse_analysis(ds,
                               fn=results_dir,
                               include_all_regressors=incl_regs,
                               reverse=True,
-                              model_contrast=hrf_contrast,
+                              model_contrast=opt_contrast,
                               )
 
     return hrf_estimates_transposed, sensitivities, cv
