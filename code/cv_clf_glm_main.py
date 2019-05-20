@@ -68,7 +68,8 @@ def dotheclassification(ds,
                         bilateral,
                         ds_type,
                         store_sens=True,
-                        niceplot=True):
+                        niceplot=True,
+                        reverse=False):
     """ Dotheclassification does the classification.
     Input: the dataset on which to perform a leave-one-out crossvalidation with a classifier
     of choice.
@@ -137,9 +138,14 @@ def dotheclassification(ds,
     if store_sens:
         def store_sens(data, node, result):
             sens = node.measure.get_sensitivity_analyzer(force_train=False)(data)
+            if not reverse:
             # we also need to manually append the time attributes to the sens ds
-            sens.fa['time_coords'] = data.fa['time_coords']
-            sens.fa['chunks'] = data.fa['chunks']
+                sens.fa['time_coords'] = data.fa['time_coords']
+                sens.fa['chunks'] = data.fa['chunks']
+            else:
+                # if we're classifying hrf_estimates, append regressor information
+                sens.fa['condition'] = data.fa['condition']
+                sens.fa['regressors'] = data.fa['regressors']
             sensitivities.append(sens)
 
         # do a crossvalidation classification and store sensitivities
