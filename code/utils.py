@@ -211,7 +211,8 @@ def norm_and_mean(norm,
         # default for normalization is the L2 norm
         sensitivities_to_normalize = copy.deepcopy(sensitivities)
         for i in range(len(sensitivities)):
-            sensitivities_to_normalize[i].samples = normalize(sensitivities_to_normalize[i].samples, axis=1)
+            sensitivities_to_normalize[i].samples = normalize(sensitivities_to_normalize[i].samples, axis=1) * np.sqrt(sensitivities[i].shape[1])
+            print(sensitivities[i].shape)
 
         sensitivities_stacked = mv.vstack(sensitivities_to_normalize)
         print('I normalized the data.')
