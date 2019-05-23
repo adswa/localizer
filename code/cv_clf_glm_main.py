@@ -673,22 +673,24 @@ def reverse_analysis(ds,
                      store_sens=True,
                      project_beta=False,
                      plot_tc=True,
-                     contrast=None):
+                     can_contrast=None):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
     on the resulting beta coefficients.
+    In order to plot, we have to all the original analyses again, unfortunately.
+    There is also a function to plot the resulting beta coefficients back into the brain. Currently,
+    this only works for non-stripped datasets, so its at the moment disabled.
     ds: dataset (the transposed group dataset)
     events_dicts: dictionary of events
-    contrast: dictionary of regressors (exact names please) and a weight
+    can_contrast: dictionary of regressors (exact names please) and a weight -- this is how to
+    plot self-defined canonical contrasts.
     """
     # step 0: transpose the data (i.e. now its non-transposed) because
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
     assert ds_transposed.shape[0] < ds_transposed.shape[1]
 
-    # get the appropriate event file
-    ### Q: how to I get the events_dicts from the movie data without precomputed sensitivities for time_coords?
-    # extract runs, chunks, timecoords from transposed dataset... I guess getavmovie_time.. does this for me
+    # get the appropriate event file. extract runs, chunks, timecoords from transposed dataset
     chunks, runs, runonsets = False, False, False
 
     if analysis == 'avmovie':
@@ -712,28 +714,19 @@ def reverse_analysis(ds,
                                            glmfit_kwargs=dict(model='ols'),
                                            return_model=True)
     # now what is this? I will try to figure it out from a stripped localizer dataset. We get
-    # hrf_estimates_transposed.samples.shape --> (16985, 12) (12 regressors, 16985 voxels). Question: In dotheglm,
-    # we provide mean sensitivities. here, ds should still contain all 15 subjects data (16985 voxel seem to be all
-    # combined voxels for all participants)... We need to find a way to get betas per participant and preserve
-    # participant information in the resulting dataset. - WAIT. This appears to be already the case.
-    # What we would need is a plot of the glm. what would we plot there... currently its voxels x regressors instead
-    # of time x regressors... we could do voxels grouped into ROIs on x axis
-    # .
+    # hrf_estimates_transposed.samples.shape --> (16985, 12) (12 regressors, 16985 voxels).
     # TODO: save regressors in here seperately
 
     # lets save these
     mv.h5save(results_dir + '/' + 'sens_glm_results.hdf5', hrf_estimates)
     print('calculated the glm, saving results')
 
-    # step 2: get the results back into a transposed form, because we want
-    # to have time points as features & extract the betas
-    # keep the time point information, necessary for classification
+    # step 2: get the results back into a transposed form, because we want to have time points as features & extract the betas
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
-    # append the time coordinates again
 
-    # find out what is happening in a given ROI. For this, use the transposed hrf_estimates,
-    # and project them into a brain. I'll saveguard this function for now, because there is still
+
+    # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
     # the unsolved overlap issue...
     project_beta = False
     if project_beta:
@@ -743,8 +736,6 @@ def reverse_analysis(ds,
         assert len(subs) > 0
         from collections import OrderedDict
         result_maps = OrderedDict()
-        # for sub in subs:
-        # for now one sub
         for sub in subs:
             print('...for subject {}...'.format(sub))
             result_maps[sub] = OrderedDict()
@@ -768,29 +759,12 @@ def reverse_analysis(ds,
         # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
         # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
         # how do we know which regressors have highest betas for given ROI? averaging?
-        # hrf_estimates.samples[0][hrf_estimates.fa.bilat_ROIs == 'FFA'] gives a beta vector for one reg
-        # [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
-        # FFA_body: 1.146           PPA: 0.191
-        # FFA body first: 2.929     PPA: 0.955
-        # FFA face: 1.573           PPA: 0.089
-        # FFA face first: 3.191     PPA: 0.025
-        # FFA house: 0.638          PPA: 1.06
-        # FFA house first: 2.270    PPA: 2.60
-        # FFA object: 0.735         PPA: 0.32
-        # FFA object first: 2.17    PPA: 1.27
-        # FFA scene: 0.405          PPA: 1.26
-        # FFA scene first: 1.405    PPA; 3.959
-        # FFA scramnle: 0.285       PPA: 0.31
-        # FFA scramble first: 0.521 PPA: 1.28
         #from collections import OrderedDict
         #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
         # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
 
-    # step 3: do the classification on the betas. We do not store sensitivies (as no glm is necessary
-    # anymore)
-
-    # currently, I get one beta per regressor per voxel for the movie data.
-    # how do I compute the sensitivities? there is no time_coords...
+    # step 3: do the classification on the betas. Store the
+    # sensitivities but no chunks or time coord information
     sensitivities, cv = dotheclassification(hrf_estimates_transposed,
                                             classifier,
                                             bilateral,
@@ -812,10 +786,9 @@ def reverse_analysis(ds,
                                     mean_sens_transposed,
                                     )
     # If I multiply the regressors with sensitivities corresponding to that index, and sum over axis=1,
-    # I should get an "optimal" contrast? at least something like a time course...
-    ## WELL IT LOOKS LIKE BULLSHIT :D
-    opt_contrast = np.sum(mean_sens_transposed.samples[:,roi_pair_idx] * mean_sens_transposed.sa.regressors.T, axis=1)
-    zscored_contrast = (opt_contrast - np.mean(opt_contrast)) / np.std(opt_contrast)
+    # I should get a contrast based on sensitivities and regressors during the second approach
+    sens_contrast = np.sum(mean_sens_transposed.samples[:,roi_pair_idx] * mean_sens_transposed.sa.regressors.T, axis=1)
+    zscored_contrast = (sens_contrast - np.mean(sens_contrast)) / np.std(sens_contrast)
     if plot_tc:
         # we want to plot on top of the existing plots -
         # that unfortunately means that we need to do the
