@@ -778,6 +778,12 @@ def reverse_analysis(ds,
                                           classifier=classifier,
                                           sensitivities=sensitivities,
                                           roi_pair=roi_pair)
+    #extract samples, we want to normalize them & put them into legend.
+    ms = [s[0] for i, s in enumerate(mean_sens_transposed.samples)]
+    ms = np.asarray(ms)
+    # that should be the l2 norm, multiplied by length of the vector
+    normed_sens = ((ms)/np.sqrt(np.sum(ms**2))) * len(ms)
+
     # mean_sens_transposed now has (70, 15) shaped samples, the regressors, and the ROIs.
     # I should be able to extract the index of the ROI pair in question
     roi_pair_idx = get_roi_pair_idx(bilateral,
