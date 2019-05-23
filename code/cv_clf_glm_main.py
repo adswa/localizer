@@ -1086,6 +1086,11 @@ if __name__ == '__main__':
         help='If given, the analysis is reversed (first glm on data, subsequent classification on betas)',
         action='store_true'
     )
+    parser.add_argument(
+        '--plotbeta',
+        help='If given, only the 2nd approach GLM is computed, and the betas are projected into niftis.',
+        action='store_true'
+    )
 
     args = parser.parse_args()
 
@@ -1098,6 +1103,22 @@ if __name__ == '__main__':
     # create the output dir if it doesn't exist
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
+
+    if args.plotbeta:
+        ds = mv.h5load(args.inputfile)
+        analysis = args.analysis
+        eventdir = args.eventdir
+        annot_dir = args.annotation if args.annotation else None
+        project_betas(ds,
+                      analysis,
+                      eventdir,
+                      results_dir,
+                      annot_dir,
+                      )
+
+        # terminate early
+        return
+
 
     # get more information about what is being calculated
     ds_type = args.dataset                      # stripped --> no brain, no overlap,
