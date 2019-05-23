@@ -981,7 +981,10 @@ def reverse_analysis(ds,
     return hrf_estimates_transposed, sensitivities, cv
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Set up and compute all possible analysis based on command line input.
+    """
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -1386,3 +1389,5 @@ if __name__ == '__main__':
                                     fn=results_dir)
 
 
+if __name__ == '__main__':
+    main()
