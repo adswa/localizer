@@ -886,7 +886,8 @@ def reverse_analysis(ds,
                               fn=results_dir,
                               include_all_regressors=incl_regs,
                               reverse=True,
-                              model_contrast=opt_contrast,
+                              model_contrast=zscored_contrast,
+                              canonical_contrast=l2norm[0],
                               )
 
     return hrf_estimates_transposed, sensitivities, cv
