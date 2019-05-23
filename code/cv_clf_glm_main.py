@@ -812,18 +812,22 @@ def reverse_analysis(ds,
             events = pd.read_csv(results_dir + 'group_events.tsv',
                                  sep='\t')
 
-            if not contrast:
+            if not can_contrast:
                 from collections import OrderedDict
-                contrast = OrderedDict()
+                can_contrast = OrderedDict()
                 # this is the "strict" FFA contrast: Faces against everything else
-                contrast['face'] = 1
-                contrast['body'] = -0.2
-                contrast['house'] = -0.2
-                contrast['scene'] = -0.2
-                contrast['scramble'] = -0.2
-                contrast['object'] = -0.2
-            hrf_contrast = get_glm_model_contrast(hrf_estimates,
-                                                  contrast=contrast)
+                can_contrast['face'] = 1
+                can_contrast['body'] = -0.2
+                can_contrast['house'] = -0.2
+                can_contrast['scene'] = -0.2
+                can_contrast['scramble'] = -0.2
+                can_contrast['object'] = -0.2
+            can_contrast = get_glm_model_contrast(hrf_estimates,
+                                                  contrast=can_contrast)
+
+            # normalize by L2 norm, scale by amount of time points
+            from sklearn import preprocessing
+            l2norm = preprocessing.normalize(can_contrast) * np.sqrt(can_contrast.shape[1])
 
             orig_hrf_estimates = dotheglm(orig_sensitivities,
                                           normalize=normalize,
@@ -842,19 +846,23 @@ def reverse_analysis(ds,
                                 bilateral=bilateral,
                                 fn=results_dir,
                                 reverse=True,
-                                model_contrast=hrf_contrast,
+                                model_contrast=zscored_contrast,
+                                canonical_contrast=l2norm[0],
+                                normed_sens=normed_sens,
                                 )
 
         elif analysis == 'avmovie':
-            if not contrast:
+            if not can_contrast:
                 from collections import OrderedDict
-                contrast = OrderedDict()
+                can_contrast = OrderedDict()
                 # lets build a face regressor
-                contrast['face'] = 0.5
-                contrast['many_faces'] = 0.5
+                can_contrast['face'] = 0.5
+                can_contrast['many_faces'] = 0.5
 
-            hrf_contrast = get_glm_model_contrast(hrf_estimates,
-                                                  contrast=contrast)[0]
+            can_contrast = get_glm_model_contrast(hrf_estimates,
+                                                  contrast=can_contrast)
+            from sklearn import preprocessing
+            l2norm = preprocessing.normalize(can_contrast) * np.sqrt(can_contrast.shape[1])
 
             orig_hrf_estimates = dotheglm(orig_sensitivities,
                                           normalize=normalize,
