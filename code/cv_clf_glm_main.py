@@ -456,6 +456,7 @@ def makeaplot_avmovie(events,
                       multimatch_only=False,
                       reverse=False,
                       model_contrast=False,
+                      canonical_contrast=False,
                       ):
     """
     This produces a time series plot for the roi class comparison specified in
@@ -620,16 +621,37 @@ def makeaplot_avmovie(events,
                 # plt.axis('scaled')
                 # del colors[0]
         times = roi_sens_ds.sa.time_coords[run_onset:run_offset]
-        if reverse:
-            # if we get here from the reverse analysis, plot the model contrast, too
-            ax.plot(times, model_contrast[run_onset:run_offset],
-                    color='blue',
-                    linestyle='dashed')
 
-        ax.plot(times, roi_sens_ds.samples[run_onset:run_offset], '-', color='black', lw=1.0)
+        ax.plot(times,
+                roi_sens_ds.samples[run_onset:run_offset],
+                '-',
+                color='#003d66',
+                lw=1,
+                #linestyle='dashed'
+                )
         # plot glm model results
         glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_onset:int(run_offset), roi_pair_idx]
-        ax.plot(times, glm_model, '-', color='#7b241c', lw=1.0)
+        ax.plot(times, glm_model,
+                '-',
+                color='#003d66',
+                lw=1,
+                linestyle='dashed',
+                )
+        if reverse:
+            # if we get here from the reverse analysis, plot the model contrast, too
+            ax.plot(times,
+                    model_contrast[run_onset:run_offset],
+                    color='#ff7f2a',
+                    lw=1.0,
+                    linestyle='dashed',
+                    )
+            # and if given, plot the canonical contrast
+            ax.plot(times,
+                    canonical_contrast[run_onset:run_offset],
+                    color='#ff7f2a',
+                    lw=1.0,
+                    linestyle='dotted',
+                    )
         model_fit = hrf_estimates.a.model.results_[0.0].R2[roi_pair_idx]
         plt.title('R squared: %.2f' % model_fit)
         if fn:
