@@ -379,17 +379,61 @@ def makeaplot_localizer(events,
                 plt.gca().add_patch(rectangle)
                 plt.legend(loc=1)
             del colors[0]
-
         times = roi_sens_ds.sa.time_coords[run_startidx[run]:run_endidx[run]]
+        plt.hold(True)
+        ax.plot(times,
+                roi_sens_ds.samples[run_startidx[run]:run_endidx[run]],
+                '-', color='#003d66',
+                #lw=1.0,
+                #linestyle='dashed',
+                )
+        glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], roi_pair_idx]
+        ax.plot(times, glm_model,
+                '-',
+                color='#003d66',
+                lw=1.0,
+                linestyle='dashed',
+                )
         if reverse:
             # if we get here from the reverse analysis, plot the model contrast, too
-            ax.plot(times, model_contrast[0][run_startidx[run]:run_endidx[run]],
-                    color='blue',
-                    linestyle='dashed')
+            ax.plot(times,
+                    model_contrast[run_startidx[run]:run_endidx[run]],
+                    color='#ff7f2a',
+                    lw=1.0,
+                    linestyle='dashed',
+                    )
+            print('plot model_contrast')
+            ax.plot(times,
+                    canonical_contrast[run_startidx[run]:run_endidx[run]],
+                    color='#ff7f2a',
+                    lw=1.0,
+                    linestyle='dotted',
+                    )
+            from matplotlib.lines import Line2D
+            custom_legend = [
+                Line2D([0], [0],
+                       color='#ff7f2a',
+                       linestyle='dashed',
+                       label='GNB sensitivity on GLM estimates',
+                       ),
+                Line2D([0], [0],
+                       color='#ff7f2a',
+                       linestyle='dotted',
+                       label='Canonical GLM contrast',
+                       ),
+                Line2D([0], [0],
+                       color='#003d66',
+                       linestyle='dashed',
+                       label='GLM on GNB sensitivity (model-free)',
+                       ),
+                Line2D([0], [0],
+                       color='#003d66',
+                       label='GNB sensitivity time course (model-free, before GLM)',
+                       ),
+            ]
+            # legend2 = plt.legend(handles=custom_legend, loc=4)
+            # plt.gca().add_artist(legend2)
 
-        ax.plot(times, roi_sens_ds.samples[run_startidx[run]:run_endidx[run]], '-', color='black', lw=1.0)
-        glm_model = hrf_estimates.a.model.results_[0.0].predicted[run_startidx[run]:run_endidx[run], roi_pair_idx]
-        ax.plot(times, glm_model, '-', color='#7b241c', lw=1.0)
         model_fit = hrf_estimates.a.model.results_[0.0].R2[roi_pair_idx]
         plt.title('R squared: %.2f' % model_fit)
         if fn:
