@@ -203,6 +203,7 @@ def dotheclassification(ds,
                      numbers=True,
                      cmap='gist_heat_r')
     plt.savefig(results_dir + 'CV_confusion_matrix.png')
+    plt.close()
     if niceplot:
         ACC = cv.ca.stats.stats['mean(ACC)']
         # get a balanced accuracy estimation bc of unbalanced class frequencies
