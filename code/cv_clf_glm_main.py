@@ -892,7 +892,8 @@ def reverse_analysis(ds,
                                                           bilateral=bilateral,
                                                           ds_type=ds_type,
                                                           store_sens=True,
-                                                          niceplot=niceplot)
+                                                          niceplot=False, # else the previous reverse conf matrix would be overwritten
+                                                          )
 
         if analysis == 'localizer':
             # we've got shit to plot
