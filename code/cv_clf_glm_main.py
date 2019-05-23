@@ -203,6 +203,7 @@ def dotheclassification(ds,
                      numbers=True,
                      cmap='gist_heat_r')
     plt.savefig(results_dir + 'CV_confusion_matrix.png')
+    plt.close()
     if niceplot:
         ACC = cv.ca.stats.stats['mean(ACC)']
         # get a balanced accuracy estimation bc of unbalanced class frequencies
@@ -364,7 +365,6 @@ def makeaplot_localizer(events,
                 beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus.replace(" ", ""), 0]
                 r_width = durations[i]
                 x = stimulation_end[i]
-                print("plotting rectangle for {}".format(stimulus))
                 if reverse:
                     label = '_' * i + stimulus.replace(" ", "") + '(' + str('%.2f' % beta) + ', ' + str('%.2f' % normed_sens[j]) + ')'
                 else:
@@ -402,7 +402,6 @@ def makeaplot_localizer(events,
                     lw=1.0,
                     linestyle='dashed',
                     )
-            print('plot model_contrast')
             ax.plot(times,
                     canonical_contrast[run_startidx[run]:run_endidx[run]],
                     color='#ff7f2a',
@@ -782,7 +781,7 @@ def reverse_analysis(ds,
 
     if analysis == 'avmovie':
         ds_transposed, chunks, runs, runonsets = get_avmovietimes(ds_transposed)
-
+    print('eventdir:', eventdir, 'analysis:', analysis)
     events_dicts = get_events(analysis=analysis,
                               eventdir=eventdir,
                               results_dir=results_dir,
