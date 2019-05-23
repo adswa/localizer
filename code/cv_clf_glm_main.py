@@ -303,6 +303,8 @@ def makeaplot_localizer(events,
                         fn=True,
                         reverse=False,
                         model_contrast=False,
+                        canonical_contrast=False,
+                        normed_sens=False,
                         ):
     """
     This produces a time series plot for the roi class comparison specified in
@@ -348,7 +350,7 @@ def makeaplot_localizer(events,
         plt.legend(loc=1)
         plt.grid(True)
         # for each stimulus, plot a color band on top of the plot
-        for stimulus in block_design:
+        for j, stimulus in enumerate(block_design):
             onsets = events[events['trial_type'] == stimulus]['onset'].values
             durations = events[events['trial_type'] == stimulus]['duration'].values
             stimulation_end = np.sum([onsets, durations], axis=0)
@@ -362,14 +364,18 @@ def makeaplot_localizer(events,
                 beta = roi_betas_ds.samples[hrf_estimates.sa.condition == stimulus.replace(" ", ""), 0]
                 r_width = durations[i]
                 x = stimulation_end[i]
+                print("plotting rectangle for {}".format(stimulus))
+                if reverse:
+                    label = '_' * i + stimulus.replace(" ", "") + '(' + str('%.2f' % beta) + ', ' + str('%.2f' % normed_sens[j]) + ')'
+                else:
+                    label = '_'*i + stimulus.replace(" ", "") + '(' + str('%.2f' % beta) + ')'
+
                 rectangle = plt.Rectangle((x, y),
                                           r_width,
                                           r_height,
                                           fc=color,
                                           alpha=0.5,
-                                          label='_'*i +
-                                                stimulus.replace(" ", "") +
-                                                '(' + str('%.2f' % beta) + ')')
+                                          label=label)
                 plt.gca().add_patch(rectangle)
                 plt.legend(loc=1)
             del colors[0]
