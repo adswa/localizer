@@ -689,14 +689,14 @@ def makeaplot_avmovie(events,
         if reverse:
             # if we get here from the reverse analysis, plot the model contrast, too
             ax.plot(times,
-                    model_contrast[run_onset[run]:run_offset[run]],
+                    model_contrast[run_onset:run_offset],
                     color='#ff7f2a',
                     lw=1.0,
                     linestyle='dashed',
                     )
             # and if given, plot the canonical contrast
             ax.plot(times,
-                    canonical_contrast[run_onset[run]:run_offset[run]],
+                    canonical_contrast[run_onset:run_offset],
                     color='#ff7f2a',
                     lw=1.0,
                     linestyle='dotted',
@@ -829,6 +829,22 @@ def reverse_analysis(ds,
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
     assert ds_transposed.shape[0] < ds_transposed.shape[1]
+    if plot_tc:
+        # if we're plotting, we need the original sensitvities, and we
+        # need to compute them before we append "overall/continuous" time coords to the ds for
+        # the GLM (else plotting the time course fails due to a loss of the
+        # original time coords per run)
+        orig_sensitivities, orig_cv = dotheclassification(ds,
+                                                          classifier=classifier,
+                                                          bilateral=bilateral,
+                                                          ds_type=ds_type,
+                                                          results_dir=results_dir,
+                                                          store_sens=True,
+                                                          niceplot=False, # else the previous reverse conf matrix would be overwritten
+                                                          reverse=False,
+                                                          )
+        print('orig_sensitivities:', orig_sensitivities[0].fa.time_coords)
+
 
     # get the appropriate event file. extract runs, chunks, timecoords from transposed dataset
     chunks, runs, runonsets = False, False, False
@@ -941,15 +957,6 @@ def reverse_analysis(ds,
         # that unfortunately means that we need to do the
         # original analysis, too:
         # do the "normal" sequence: first classification, then GLM on derived sensitivities
-        orig_sensitivities, orig_cv = dotheclassification(ds,
-                                                          classifier=classifier,
-                                                          bilateral=bilateral,
-                                                          ds_type=ds_type,
-                                                          results_dir=results_dir,
-                                                          store_sens=True,
-                                                          niceplot=False, # else the previous reverse conf matrix would be overwritten
-                                                          )
-
         if analysis == 'localizer':
             # we've got shit to plot
             events = pd.read_csv(results_dir + 'group_events.tsv',
@@ -1421,6 +1428,7 @@ def main():
                                      eventdir=eventdir,
                                      roi_pair=roi_pair,
                                      results_dir=results_dir,
+                                     bilateral=bilateral,
                                      multimatch=False
                                      )
             if plot_ts:
@@ -1430,6 +1438,7 @@ def main():
                                   hrf_estimates,
                                   roi_pair,
                                   normalize=normalize,
+                                  results_dir=results_dir,
                                   classifier=classifier,
                                   bilateral=bilateral,
                                   fn=results_dir,
@@ -1442,6 +1451,7 @@ def main():
                                      classifier=classifier,
                                      eventdir=eventdir,
                                      roi_pair=roi_pair,
+                                     bilateral=bilateral,
                                      results_dir = results_dir,
                                      multimatch=False)
             if plot_ts:
@@ -1455,6 +1465,7 @@ def main():
                                     normalize=normalize,
                                     classifier=classifier,
                                     bilateral=bilateral,
+                                    results_dir=results_dir,
                                     fn=results_dir)
 
 
