@@ -135,6 +135,7 @@ def dotheclassification(ds,
 
         clf = mv.GNB(common_variance=True,
                  prior=prior,
+                 normalize=True,
                  space=targets)
 
         ## TODO: also get the classifiers estimates, but without the infs ;)
@@ -273,7 +274,7 @@ def dotheclassification(ds,
     # sensitivities contains a dataset for each participant with the
     # sensitivities as samples and class-pairings as attributes
     #import pdb; pdb.set_trace()
-    return sensitivities, cv
+    return sensitivities, cv, clf
 
 
 def dotheglm(sensitivities,
