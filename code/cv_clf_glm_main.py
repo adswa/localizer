@@ -63,6 +63,50 @@ Command line specifications are as follows:
                on resulting betas
 """
 
+def plot_estimates(clf_estimates,
+                   hrf_estimates):
+    """
+    This function needs to be able to plot the classifiers estimates (clf.ca.estimates)
+    and the hrf_estimates from the reverse analysis in a scatterplot.
+    The situation is:
+    clf.ca.estimates contains the normalized probabilities from one (the test) subject,
+    with shape (voxel, number of ROIs). I assume what will be of interest are the estimates
+    from the ROI thats not the brain...
+    hrf_estimates_transposed has the betas for all voxels, for all regressors, with shape
+    (all voxels, conditions).
+    prolem 0: how to find out which participant was the left out one?
+    How to find out which index belongs to which ROI?
+    Problem 1: select the appropriate beta values (subset e.g. with
+    hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == 'sub-02'])
+    Problem 2: figure out what to do with regressors and ROIs... maybe in conjunction to
+    what we put into a brain plot...
+    """
+    import matplotlib.pyplot as plt
+    # My hypothesis is that the estimates belong to the last subject in participants (the
+    # last subject being the "tested" one.
+    sub = ds.sa.participant[-1]
+    # get the voxel-label association in this participant
+    voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
+    ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
+    assoc = list(zip(ROIs, voxelind))
+
+    # get only the FFA voxel out of the estimates
+    FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
+    # only the indexes
+    FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
+
+    #if we exponentiate this (to get rid of the log):
+    exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
+    # get indices of "winners" -- highest estimate per array
+    winner = np.argmax(exp_est, axis=1)
+    # zip exponentiated estimates together with the index of the larger of the two
+    est_win = list(zip(exp_est, winner))
+
+    #hrf_estimates has voxel index information, that means we could subset it as the estimates
+
+
+
+
 def dotheclassification(ds,
                         classifier,
                         bilateral,
