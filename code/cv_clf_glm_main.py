@@ -949,8 +949,7 @@ def reverse_analysis(ds,
                                            design_kwargs=dict(drift_model='blank'),
                                            glmfit_kwargs=dict(model='ols'),
                                            return_model=True)
-    # now what is this? I will try to figure it out from a stripped localizer dataset. We get
-    # hrf_estimates_transposed.samples.shape --> (16985, 12) (12 regressors, 16985 voxels).
+    # One beta per voxel, per regressor
     # TODO: save regressors in here seperately
 
     # lets save these
