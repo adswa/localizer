@@ -718,3 +718,23 @@ def get_glm_model_contrast(hrf_estimates, contrast):
                            for c, v in contrast.items()]
     custom_model = np.sum(weighted_regressors, axis=0)
     return custom_model
+
+
+def findsub(ds,
+            estimates):
+    """idiotic helper to reverse sort out which participants estimates we have infront of us.
+    As of now, I haven't been able to extract any information on which subject was the test for any
+    given fold of the cross validation. Therefore, I'm now comparing voxel counts. Will be fucked
+    if two subjects have the same amount of voxel"""
+    # this list will store the order of participants
+    order = []
+    for est in estimates:
+        # extract no of voxel
+        count = est['estimates'].shape[0]
+        assert est['estimates'].shape[0] > est['estimates'].shape[1]
+        for sub in np.unique(ds.sa.participant):
+            i = sum(ds.sa.participant==sub)
+            if i == count:
+                order.append(sub)
+                est['subject'] = sub
+    return order, estimates

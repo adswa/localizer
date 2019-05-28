@@ -16,7 +16,9 @@ from utils import (bilateralize,
                    strip_ds,
                    buildremapper,
                    avg_trans_sens,
-                   get_glm_model_contrast)
+                   get_glm_model_contrast,
+                   findsub,
+                   )
 
 """
 One script to rule them all:
