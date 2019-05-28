@@ -894,7 +894,9 @@ def reverse_analysis(ds,
                      store_sens=True,
                      project_beta=False,
                      plot_tc=True,
-                     can_contrast=None):
+                     can_contrast=None,
+                     plot_est=True,
+                     ):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
     on the resulting beta coefficients.
@@ -961,6 +963,12 @@ def reverse_analysis(ds,
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
 
+    # plot the HRF estimates together with the classifier decision
+    if plot_est:
+        plot_estimates(clf_estimates=estimates,
+                       hrf_estimates=hrf_estimates,
+                       hrf_estimates_transposed=hrf_estimates_transposed,
+                       ds=ds)
 
     # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
     # the unsolved overlap issue...
