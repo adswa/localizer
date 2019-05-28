@@ -69,6 +69,7 @@ def plot_estimates(clf_estimates,
                    hrf_estimates,
                    hrf_estimates_transposed,
                    ds,
+                   results_dir,
                    #TODO: ROI='FFA',
                    #TODO: regressor/contrast
                    ):
@@ -999,7 +1000,9 @@ def reverse_analysis(ds,
         plot_estimates(clf_estimates=estimates,
                        hrf_estimates=hrf_estimates,
                        hrf_estimates_transposed=hrf_estimates_transposed,
-                       ds=ds)
+                       ds=ds,
+                       results_dir=results_dir,
+                       )
 
     # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
     # the unsolved overlap issue...
