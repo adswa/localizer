@@ -84,9 +84,75 @@ def plot_estimates(clf_estimates,
     what we put into a brain plot...
     """
     import matplotlib.pyplot as plt
-    # My hypothesis is that the estimates belong to the last subject in participants (the
-    # last subject being the "tested" one.
-    sub = ds.sa.participant[-1]
+    # find the order of sub in the estimates, and attach subject info
+    subs, estimates = findsub(ds, clf_estimates)
+
+    # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
+    # an ROI in question (e.g. FFA), and collectively store those for later plotting.
+    # list with sequential correct/incorrect (FFA/brain) decision of the classifier
+    winners = []
+    # list with sequential maximum estimate per voxel
+    max_estimates = []
+    # list with sequential hrf estimates for a regressor of choice
+    hrfs = []
+    for sub in subs:
+        print(sub)
+        for i, est in enumerate(clf_estimates):
+            print(i)
+            if clf_estimates[i]['subject'] == sub:
+                print(i)
+                # get the voxel-label association in this participant
+                voxelind = ds[ds.sa.participant==sub].sa.voxel_indices
+                ROIs = ds[ds.sa.participant==sub].sa.bilat_ROIs
+                assoc = list(zip(ROIs, voxelind))
+                # get only the FFA voxel out of the estimates
+                FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
+                if FFA_vox == []:
+                    # some subjects don't have FFA masks - we then need to break
+                    print("""
+                    During plotting, I could not find FFA masks for subject {}
+                    and hence I'm skipping it.""".format(sub))
+                    break
+                # only the indexes
+                FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
+                # if we exponentiate this (to get rid of the log):
+                exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
+                max_est = [max(np.exp(clf.ca.estimates[i])) for i in FFA_ind]
+                # get indices of "winners" -- highest estimate per array
+                winner = np.argmax(exp_est, axis=1)
+                # zip exponentiated estimates together with the index of the larger of the two
+                #est_win = list(zip(exp_est, winner))
+                # hrf_estimates has voxel index information, that means we could subset it as the estimates
+                # get the hrf_estimates from one regressor from left-out.subject:
+                hrf = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
+                face_hrf = hrf.samples[:, 2]  # where 2 indexes the regressor (here: face)
+                FFA_face_hrfs = [face_hrf[i] for i in FFA_ind]
+
+                winners.extend(winner)
+                max_estimates.extend(max_est)
+                hrfs.extend(FFA_face_hrfs)
+    # list --> ndarray: to make np.where work
+    winners = np.asarray(winners)
+    # now plot this - plot in red when estimates predicted FFA, in blue if brain
+    col = np.where(winners==0, 'r', np.where(winners==1, 'b', 'k'))
+    # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
+    x = [0 if win==0 else 0.5 for win in winners]
+    assert len(x) == len(col) == len(max_estimates)
+    # scatterplot is a bit lame -- violin plots contain more information.
+    ##plt.scatter(x, hrfs, c=col)
+
+    # we could also do that as a violin plot
+    import pandas as pd
+    import seaborn as sns
+    fig, ax = plt.subplots()
+    x_cat = ['FFA' if win==0 else 'brain' for win in winner]
+    x_cat = pd.Series(x_cat)
+    sns.violinplot(x_cat, hrfs, order=['FFA', 'brain'])
+    ax.set_ylabel('Betas')
+    plt.savefig(results_dir + 'violinplot_hrfs_clfdecision.svg')
+
+
+
     # get the voxel-label association in this participant
     voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
     ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
