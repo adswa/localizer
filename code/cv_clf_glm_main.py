@@ -69,8 +69,18 @@ def plot_estimates(clf_estimates,
                    hrf_estimates,
                    hrf_estimates_transposed,
                    ds,
+                   #TODO: ROI='FFA',
+                   #TODO: regressor/contrast
                    ):
     """
+    clf_estimates = probability estimates derived during crossvalidation.
+         Is a list containing dictionaries (estimates, voxelindices, bilat ROIs)
+    hrf_estimates = GLM results from reversed analysis
+    hrf_estimates_transposed = transposed GLM results from reversed analysis
+    ds = dataset
+    ROI = ROI of choice, default is FFA. This ROIs voxel results (GLM and prob est) are
+            plotted.
+    regressor/contrast = what contrast or regressor to derive GLM results from
     This function needs to be able to plot the classifiers estimates (clf.ca.estimates)
     and the hrf_estimates from the reverse analysis in a scatterplot.
     The situation is:
@@ -110,7 +120,7 @@ def plot_estimates(clf_estimates,
                 assoc = list(zip(ROIs, voxelind))
                 # get only the FFA voxel out of the estimates
                 FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
-                if FFA_vox == []:
+                if FFA_vox == []: # TODO: make ROI a parameter
                     # some subjects don't have FFA masks - we then need to break
                     print("""
                     During plotting, I could not find FFA masks for subject {}
@@ -128,7 +138,7 @@ def plot_estimates(clf_estimates,
                 # hrf_estimates has voxel index information, that means we could subset it as the estimates
                 # get the hrf_estimates from one regressor from left-out.subject:
                 hrf = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
-                face_hrf = hrf.samples[:, 2]  # where 2 indexes the regressor (here: face)
+                face_hrf = hrf.samples[:, -12]  # where 2 indexes the regressor.. #TODO: make this index from a function (here: face)
                 FFA_face_hrfs = [face_hrf[i] for i in FFA_ind]
 
                 winners.extend(winner)
