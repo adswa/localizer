@@ -66,7 +66,10 @@ Command line specifications are as follows:
 """
 
 def plot_estimates(clf_estimates,
-                   hrf_estimates):
+                   hrf_estimates,
+                   hrf_estimates_transposed,
+                   ds,
+                   ):
     """
     This function needs to be able to plot the classifiers estimates (clf.ca.estimates)
     and the hrf_estimates from the reverse analysis in a scatterplot.
