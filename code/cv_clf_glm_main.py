@@ -16,7 +16,9 @@ from utils import (bilateralize,
                    strip_ds,
                    buildremapper,
                    avg_trans_sens,
-                   get_glm_model_contrast)
+                   get_glm_model_contrast,
+                   findsub,
+                   )
 
 """
 One script to rule them all:
@@ -63,6 +65,150 @@ Command line specifications are as follows:
                on resulting betas
 """
 
+def plot_estimates(clf_estimates,
+                   hrf_estimates,
+                   hrf_estimates_transposed,
+                   ds,
+                   #TODO: ROI='FFA',
+                   #TODO: regressor/contrast
+                   ):
+    """
+    clf_estimates = probability estimates derived during crossvalidation.
+         Is a list containing dictionaries (estimates, voxelindices, bilat ROIs)
+    hrf_estimates = GLM results from reversed analysis
+    hrf_estimates_transposed = transposed GLM results from reversed analysis
+    ds = dataset
+    ROI = ROI of choice, default is FFA. This ROIs voxel results (GLM and prob est) are
+            plotted.
+    regressor/contrast = what contrast or regressor to derive GLM results from
+    This function needs to be able to plot the classifiers estimates (clf.ca.estimates)
+    and the hrf_estimates from the reverse analysis in a scatterplot.
+    The situation is:
+    clf.ca.estimates contains the normalized probabilities from one (the test) subject,
+    with shape (voxel, number of ROIs). I assume what will be of interest are the estimates
+    from the ROI thats not the brain...
+    hrf_estimates_transposed has the betas for all voxels, for all regressors, with shape
+    (all voxels, conditions).
+    prolem 0: how to find out which participant was the left out one?
+    How to find out which index belongs to which ROI?
+    Problem 1: select the appropriate beta values (subset e.g. with
+    hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == 'sub-02'])
+    Problem 2: figure out what to do with regressors and ROIs... maybe in conjunction to
+    what we put into a brain plot...
+    """
+    import matplotlib.pyplot as plt
+    # find the order of sub in the estimates, and attach subject info
+    subs, clf_estimates = findsub(ds, clf_estimates)
+
+    # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
+    # an ROI in question (e.g. FFA), and collectively store those for later plotting.
+    # list with sequential correct/incorrect (FFA/brain) decision of the classifier
+    winners = []
+    # list with sequential maximum estimate per voxel
+    max_estimates = []
+    # list with sequential hrf estimates for a regressor of choice
+    hrfs = []
+    for sub in subs:
+        print(sub)
+        for i, est in enumerate(clf_estimates):
+            print(i)
+            if clf_estimates[i]['subject'] == sub:
+                print(i)
+                # get the voxel-label association in this participant
+                voxelind = ds[ds.sa.participant==sub].sa.voxel_indices
+                ROIs = ds[ds.sa.participant==sub].sa.bilat_ROIs
+                assoc = list(zip(ROIs, voxelind))
+                # get only the FFA voxel out of the estimates
+                FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
+                if FFA_vox == []: # TODO: make ROI a parameter
+                    # some subjects don't have FFA masks - we then need to break
+                    print("""
+                    During plotting, I could not find FFA masks for subject {}
+                    and hence I'm skipping it.""".format(sub))
+                    break
+                # only the indexes
+                FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
+                # if we exponentiate this (to get rid of the log):
+                exp_est = [np.exp(est['estimates'][i]) for i in FFA_ind]
+                max_est = [max(np.exp(est['estimates'][i])) for i in FFA_ind]
+                # get indices of "winners" -- highest estimate per array
+                winner = np.argmax(exp_est, axis=1)
+                # zip exponentiated estimates together with the index of the larger of the two
+                #est_win = list(zip(exp_est, winner))
+                # hrf_estimates has voxel index information, that means we could subset it as the estimates
+                # get the hrf_estimates from one regressor from left-out.subject:
+                hrf = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
+                face_hrf = hrf.samples[:, -12]  # where 2 indexes the regressor.. #TODO: make this index from a function (here: face)
+                FFA_face_hrfs = [face_hrf[i] for i in FFA_ind]
+
+                winners.extend(winner)
+                max_estimates.extend(max_est)
+                hrfs.extend(FFA_face_hrfs)
+    # list --> ndarray: to make np.where work
+    winners = np.asarray(winners)
+    assert len(winners) == len(max_estimates) == len(hrfs)
+    # now plot this - plot in red when estimates predicted FFA, in blue if brain
+    ##col = np.where(winners==0, 'r', np.where(winners==1, 'b', 'k'))
+    # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
+    ##x = [0 if win==0 else 0.5 for win in winners]
+    ##assert len(x) == len(col) == len(max_estimates)
+    # scatterplot is a bit lame -- violin plots contain more information.
+    ##plt.scatter(x, hrfs, c=col)
+
+    # we could also do that as a violin plot
+    print('Plotting the estimates...')
+    import pandas as pd
+    import seaborn as sns
+    fig, ax = plt.subplots()
+    x_cat = ['FFA' if win==0 else 'brain' for win in winners]
+    x_cat = pd.Series(x_cat)
+    sns.violinplot(x_cat,
+                   hrfs,
+                   order=['FFA', 'brain'],
+                   scale='count',   #this scales width to number of samples in bin
+                   )
+    ax.set_ylabel('Betas')
+    ax.set_xlabel('Classifier decision')
+    plt.title('Clf decision (from prob est from 1) and GLM results (2), FFA voxel')
+    plt.savefig(results_dir + 'violinplot_hrfs_clfdecision.svg')
+
+
+
+    # # get the voxel-label association in this participant
+    # voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
+    # ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
+    # assoc = list(zip(ROIs, voxelind))
+    #
+    # # get only the FFA voxel out of the estimates
+    # FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
+    # # only the indexes
+    # FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
+    #
+    # #if we exponentiate this (to get rid of the log):
+    # exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
+    # max_est = [max(np.exp(clf.ca.estimates[i])) for i in FFA_ind]
+    # # get indices of "winners" -- highest estimate per array
+    # winner = np.argmax(exp_est, axis=1)
+    # # zip exponentiated estimates together with the index of the larger of the two
+    # est_win = list(zip(exp_est, winner))
+    #
+    # #hrf_estimates has voxel index information, that means we could subset it as the estimates
+    # #get the hrf_estimates from one regressor from left-out.subject:
+    # hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
+    # face_hrfs = hrfs.samples[:,2] # where 2 indexes the regressor (here: face)
+    # FFA_face_hrfs = [face_hrfs[i] for i in FFA_ind]
+    #
+    # fig, ax = plt.subplots()
+    # col = np.where(winner==0, 'r', np.where(winner==1, 'b', 'k'))
+    # plt.scatter(max_est, FFA_face_hrfs, c=col)
+    #
+    # # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
+    # x = [0 if win==0 else 0.5 for win in winner]
+    #
+    # # TODO: aggregate this over all subjects!
+
+
+
 def dotheclassification(ds,
                         classifier,
                         bilateral,
@@ -91,6 +237,7 @@ def dotheclassification(ds,
 
         clf = mv.GNB(common_variance=True,
                  prior=prior,
+                 normalize=True,
                  space=targets)
 
         ## TODO: also get the classifiers estimates, but without the infs ;)
@@ -136,6 +283,8 @@ def dotheclassification(ds,
     print('Set up the classifier {} for classification.'.format(classifier))
     # prepare for callback of sensitivity extraction within CrossValidation
     sensitivities = []
+    estimates = []
+    # currently, I can't derive info on which subject was the test...
     if store_sens:
         def store_sens(data, node, result):
             sens = node.measure.get_sensitivity_analyzer(force_train=False)(data)
@@ -148,6 +297,13 @@ def dotheclassification(ds,
                 sens.fa['condition'] = data.fa['condition']
                 sens.fa['regressors'] = data.fa['regressors']
             sensitivities.append(sens)
+            # store the estimates as well
+            ## QUESTION: HOW DO I GET INFORMATION ABOUT TESTED SUBJECT?
+            ## the only somewhat identifying feature is the number of voxels...
+            est = {'estimates': node.measure.ca.estimates, # not sure whether the other stuff is relevant
+                   'voxel_indices': data.sa['voxel_indices'],
+                   'bilat_ROIs': data.sa['bilat_ROIs']}
+            estimates.append(est)
 
         # do a crossvalidation classification and store sensitivities
         cv = mv.CrossValidation(clf, mv.NFoldPartitioner(attr='participant'),
@@ -229,7 +385,7 @@ def dotheclassification(ds,
     # sensitivities contains a dataset for each participant with the
     # sensitivities as samples and class-pairings as attributes
     #import pdb; pdb.set_trace()
-    return sensitivities, cv
+    return sensitivities, cv, estimates
 
 
 def dotheglm(sensitivities,
@@ -491,6 +647,7 @@ def makeaplot_avmovie(events,
     # so we will guestimate it based on the values of time_coords
     runs = np.unique(mean_sens_transposed.sa.chunks)
     tc = mean_sens_transposed.sa.time_coords
+    assert tc[-1] < 675     # else we've fucked up and overwrote the original time coords somewhere
     TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
     assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
 
@@ -768,7 +925,9 @@ def reverse_analysis(ds,
                      store_sens=True,
                      project_beta=False,
                      plot_tc=True,
-                     can_contrast=None):
+                     can_contrast=None,
+                     plot_est=True,
+                     ):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
     on the resulting beta coefficients.
@@ -784,20 +943,20 @@ def reverse_analysis(ds,
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
     assert ds_transposed.shape[0] < ds_transposed.shape[1]
-    if plot_tc:
-        # if we're plotting, we need the original sensitvities, and we
+    if plot_tc or plot_est:
+        # if we're plotting, we need the original sensitvities and/or the estimates, and we
         # need to compute them before we append "overall/continuous" time coords to the ds for
         # the GLM (else plotting the time course fails due to a loss of the
         # original time coords per run)
-        orig_sensitivities, orig_cv = dotheclassification(ds,
-                                                          classifier=classifier,
-                                                          bilateral=bilateral,
-                                                          ds_type=ds_type,
-                                                          results_dir=results_dir,
-                                                          store_sens=True,
-                                                          niceplot=False, # else the previous reverse conf matrix would be overwritten
-                                                          reverse=False,
-                                                          )
+        orig_sensitivities, orig_c, estimates = dotheclassification(ds,
+                                                                    classifier=classifier,
+                                                                    bilateral=bilateral,
+                                                                    ds_type=ds_type,
+                                                                    results_dir=results_dir,
+                                                                    store_sens=True,
+                                                                    niceplot=False, # else the previous reverse conf matrix would be overwritten
+                                                                    reverse=False,
+                                                                    )
         print('orig_sensitivities:', orig_sensitivities[0].fa.time_coords)
 
 
@@ -824,18 +983,23 @@ def reverse_analysis(ds,
                                            design_kwargs=dict(drift_model='blank'),
                                            glmfit_kwargs=dict(model='ols'),
                                            return_model=True)
-    # now what is this? I will try to figure it out from a stripped localizer dataset. We get
-    # hrf_estimates_transposed.samples.shape --> (16985, 12) (12 regressors, 16985 voxels).
+    # One beta per voxel, per regressor
     # TODO: save regressors in here seperately
 
     # lets save these
-    mv.h5save(results_dir + '/' + 'sens_glm_results.hdf5', hrf_estimates)
+    mv.h5save(results_dir + '/' + 'reverse_glm_results.hdf5', hrf_estimates)
     print('calculated the glm, saving results')
 
     # step 2: get the results back into a transposed form, because we want to have time points as features & extract the betas
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
 
+    # plot the HRF estimates together with the classifier decision
+    if plot_est:
+        plot_estimates(clf_estimates=estimates,
+                       hrf_estimates=hrf_estimates,
+                       hrf_estimates_transposed=hrf_estimates_transposed,
+                       ds=ds)
 
     # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
     # the unsolved overlap issue...
@@ -876,14 +1040,15 @@ def reverse_analysis(ds,
 
     # step 3: do the classification on the betas. Store the
     # sensitivities but no chunks or time coord information
-    sensitivities, cv = dotheclassification(hrf_estimates_transposed,
-                                            classifier,
-                                            bilateral,
-                                            ds_type,
-                                            results_dir,
-                                            store_sens=True,
-                                            niceplot = niceplot,
-                                            reverse=True)
+    sensitivities, cv, estimates = dotheclassification(hrf_estimates_transposed,
+                                                       classifier,
+                                                       bilateral,
+                                                       ds_type,
+                                                       results_dir,
+                                                       store_sens=True,
+                                                       niceplot = niceplot,
+                                                       reverse=True,
+                                                       )
 
     mean_sens_transposed = avg_trans_sens(normalize=False,
                                           bilateral=bilateral,
@@ -1367,13 +1532,14 @@ def main():
                                                                        )
     else:
         # do the "normal" sequence: first classification, then GLM on derived sensitivities
-        sensitivities, cv = dotheclassification(ds,
-                                                classifier=classifier,
-                                                bilateral=bilateral,
-                                                ds_type=ds_type,
-                                                results_dir=results_dir,
-                                                store_sens=store_sens,
-                                                niceplot=niceplot)
+        sensitivities, cv, estimates = dotheclassification(ds,
+                                                           classifier=classifier,
+                                                           bilateral=bilateral,
+                                                           ds_type=ds_type,
+                                                           results_dir=results_dir,
+                                                           store_sens=store_sens,
+                                                           niceplot=niceplot,
+                                                           )
         if (glm) and (analysis == 'avmovie'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
