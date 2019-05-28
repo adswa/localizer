@@ -98,7 +98,7 @@ def plot_estimates(clf_estimates,
     """
     import matplotlib.pyplot as plt
     # find the order of sub in the estimates, and attach subject info
-    subs, estimates = findsub(ds, clf_estimates)
+    subs, clf_estimates = findsub(ds, clf_estimates)
 
     # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
     # an ROI in question (e.g. FFA), and collectively store those for later plotting.
@@ -129,8 +129,8 @@ def plot_estimates(clf_estimates,
                 # only the indexes
                 FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
                 # if we exponentiate this (to get rid of the log):
-                exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
-                max_est = [max(np.exp(clf.ca.estimates[i])) for i in FFA_ind]
+                exp_est = [np.exp(est['estimates'][i]) for i in FFA_ind]
+                max_est = [max(np.exp(est['estimates'][i])) for i in FFA_ind]
                 # get indices of "winners" -- highest estimate per array
                 winner = np.argmax(exp_est, axis=1)
                 # zip exponentiated estimates together with the index of the larger of the two
@@ -146,45 +146,66 @@ def plot_estimates(clf_estimates,
                 hrfs.extend(FFA_face_hrfs)
     # list --> ndarray: to make np.where work
     winners = np.asarray(winners)
+    assert len(winners) == len(max_estimates) == len(hrfs)
     # now plot this - plot in red when estimates predicted FFA, in blue if brain
-    col = np.where(winners==0, 'r', np.where(winners==1, 'b', 'k'))
+    ##col = np.where(winners==0, 'r', np.where(winners==1, 'b', 'k'))
     # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
-    x = [0 if win==0 else 0.5 for win in winners]
-    assert len(x) == len(col) == len(max_estimates)
+    ##x = [0 if win==0 else 0.5 for win in winners]
+    ##assert len(x) == len(col) == len(max_estimates)
     # scatterplot is a bit lame -- violin plots contain more information.
     ##plt.scatter(x, hrfs, c=col)
 
     # we could also do that as a violin plot
+    print('Plotting the estimates...')
     import pandas as pd
     import seaborn as sns
     fig, ax = plt.subplots()
-    x_cat = ['FFA' if win==0 else 'brain' for win in winner]
+    x_cat = ['FFA' if win==0 else 'brain' for win in winners]
     x_cat = pd.Series(x_cat)
-    sns.violinplot(x_cat, hrfs, order=['FFA', 'brain'])
+    sns.violinplot(x_cat,
+                   hrfs,
+                   order=['FFA', 'brain'],
+                   scale='count',   #this scales width to number of samples in bin
+                   )
     ax.set_ylabel('Betas')
+    ax.set_xlabel('Classifier decision')
+    plt.title('Clf decision (from prob est from 1) and GLM results (2), FFA voxel')
     plt.savefig(results_dir + 'violinplot_hrfs_clfdecision.svg')
 
 
 
-    # get the voxel-label association in this participant
-    voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
-    ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
-    assoc = list(zip(ROIs, voxelind))
-
-    # get only the FFA voxel out of the estimates
-    FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
-    # only the indexes
-    FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
-
-    #if we exponentiate this (to get rid of the log):
-    exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
-    # get indices of "winners" -- highest estimate per array
-    winner = np.argmax(exp_est, axis=1)
-    # zip exponentiated estimates together with the index of the larger of the two
-    est_win = list(zip(exp_est, winner))
-
-    #hrf_estimates has voxel index information, that means we could subset it as the estimates
-
+    # # get the voxel-label association in this participant
+    # voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
+    # ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
+    # assoc = list(zip(ROIs, voxelind))
+    #
+    # # get only the FFA voxel out of the estimates
+    # FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
+    # # only the indexes
+    # FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
+    #
+    # #if we exponentiate this (to get rid of the log):
+    # exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
+    # max_est = [max(np.exp(clf.ca.estimates[i])) for i in FFA_ind]
+    # # get indices of "winners" -- highest estimate per array
+    # winner = np.argmax(exp_est, axis=1)
+    # # zip exponentiated estimates together with the index of the larger of the two
+    # est_win = list(zip(exp_est, winner))
+    #
+    # #hrf_estimates has voxel index information, that means we could subset it as the estimates
+    # #get the hrf_estimates from one regressor from left-out.subject:
+    # hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
+    # face_hrfs = hrfs.samples[:,2] # where 2 indexes the regressor (here: face)
+    # FFA_face_hrfs = [face_hrfs[i] for i in FFA_ind]
+    #
+    # fig, ax = plt.subplots()
+    # col = np.where(winner==0, 'r', np.where(winner==1, 'b', 'k'))
+    # plt.scatter(max_est, FFA_face_hrfs, c=col)
+    #
+    # # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
+    # x = [0 if win==0 else 0.5 for win in winner]
+    #
+    # # TODO: aggregate this over all subjects!
 
 
 
