@@ -252,6 +252,8 @@ def dotheclassification(ds,
     print('Set up the classifier {} for classification.'.format(classifier))
     # prepare for callback of sensitivity extraction within CrossValidation
     sensitivities = []
+    estimates = []
+    # currently, I can't derive info on which subject was the test...
     if store_sens:
         def store_sens(data, node, result):
             sens = node.measure.get_sensitivity_analyzer(force_train=False)(data)
@@ -264,6 +266,13 @@ def dotheclassification(ds,
                 sens.fa['condition'] = data.fa['condition']
                 sens.fa['regressors'] = data.fa['regressors']
             sensitivities.append(sens)
+            # store the estimates as well
+            ## QUESTION: HOW DO I GET INFORMATION ABOUT TESTED SUBJECT?
+            ## the only somewhat identifying feature is the number of voxels...
+            est = {'estimates': node.measure.ca.estimates, # not sure whether the other stuff is relevant
+                   'voxel_indices': data.sa['voxel_indices'],
+                   'bilat_ROIs': data.sa['bilat_ROIs']}
+            estimates.append(est)
 
         # do a crossvalidation classification and store sensitivities
         cv = mv.CrossValidation(clf, mv.NFoldPartitioner(attr='participant'),
@@ -345,7 +354,7 @@ def dotheclassification(ds,
     # sensitivities contains a dataset for each participant with the
     # sensitivities as samples and class-pairings as attributes
     #import pdb; pdb.set_trace()
-    return sensitivities, cv, clf
+    return sensitivities, cv, estimates
 
 
 def dotheglm(sensitivities,
