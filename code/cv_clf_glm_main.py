@@ -616,6 +616,7 @@ def makeaplot_avmovie(events,
     # so we will guestimate it based on the values of time_coords
     runs = np.unique(mean_sens_transposed.sa.chunks)
     tc = mean_sens_transposed.sa.time_coords
+    assert tc[-1] < 675     # else we've fucked up and overwrote the original time coords somewhere
     TRdirty = sorted(np.unique(tc[1:] - tc[:-1]))[-1]
     assert np.abs(np.round(TRdirty, decimals=2) - TRdirty) < 0.0001
 
