@@ -909,20 +909,20 @@ def reverse_analysis(ds,
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
     assert ds_transposed.shape[0] < ds_transposed.shape[1]
-    if plot_tc:
-        # if we're plotting, we need the original sensitvities, and we
+    if plot_tc or plot_est:
+        # if we're plotting, we need the original sensitvities and/or the estimates, and we
         # need to compute them before we append "overall/continuous" time coords to the ds for
         # the GLM (else plotting the time course fails due to a loss of the
         # original time coords per run)
-        orig_sensitivities, orig_cv = dotheclassification(ds,
-                                                          classifier=classifier,
-                                                          bilateral=bilateral,
-                                                          ds_type=ds_type,
-                                                          results_dir=results_dir,
-                                                          store_sens=True,
-                                                          niceplot=False, # else the previous reverse conf matrix would be overwritten
-                                                          reverse=False,
-                                                          )
+        orig_sensitivities, orig_c, estimates = dotheclassification(ds,
+                                                                    classifier=classifier,
+                                                                    bilateral=bilateral,
+                                                                    ds_type=ds_type,
+                                                                    results_dir=results_dir,
+                                                                    store_sens=True,
+                                                                    niceplot=False, # else the previous reverse conf matrix would be overwritten
+                                                                    reverse=False,
+                                                                    )
         print('orig_sensitivities:', orig_sensitivities[0].fa.time_coords)
 
 
@@ -1001,14 +1001,15 @@ def reverse_analysis(ds,
 
     # step 3: do the classification on the betas. Store the
     # sensitivities but no chunks or time coord information
-    sensitivities, cv = dotheclassification(hrf_estimates_transposed,
-                                            classifier,
-                                            bilateral,
-                                            ds_type,
-                                            results_dir,
-                                            store_sens=True,
-                                            niceplot = niceplot,
-                                            reverse=True)
+    sensitivities, cv, estimates = dotheclassification(hrf_estimates_transposed,
+                                                       classifier,
+                                                       bilateral,
+                                                       ds_type,
+                                                       results_dir,
+                                                       store_sens=True,
+                                                       niceplot = niceplot,
+                                                       reverse=True,
+                                                       )
 
     mean_sens_transposed = avg_trans_sens(normalize=False,
                                           bilateral=bilateral,
@@ -1492,13 +1493,14 @@ def main():
                                                                        )
     else:
         # do the "normal" sequence: first classification, then GLM on derived sensitivities
-        sensitivities, cv = dotheclassification(ds,
-                                                classifier=classifier,
-                                                bilateral=bilateral,
-                                                ds_type=ds_type,
-                                                results_dir=results_dir,
-                                                store_sens=store_sens,
-                                                niceplot=niceplot)
+        sensitivities, cv, estimates = dotheclassification(ds,
+                                                           classifier=classifier,
+                                                           bilateral=bilateral,
+                                                           ds_type=ds_type,
+                                                           results_dir=results_dir,
+                                                           store_sens=store_sens,
+                                                           niceplot=niceplot,
+                                                           )
         if (glm) and (analysis == 'avmovie'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
