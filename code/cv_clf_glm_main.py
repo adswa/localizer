@@ -100,6 +100,7 @@ def plot_estimates(clf_estimates,
     import matplotlib.pyplot as plt
     # find the order of sub in the estimates, and attach subject info
     subs, clf_estimates = findsub(ds, clf_estimates)
+    mv.h5save(results_dir + 'clf_estimates', clf_estimates)
 
     # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
     # an ROI in question (e.g. FFA), and collectively store those for later plotting.
