@@ -338,7 +338,9 @@ def dotheclassification(ds,
                         results_dir,
                         store_sens=True,
                         niceplot=True,
-                        reverse=False):
+                        reverse=False,
+                        plotting=True,
+                        ):
     """ Dotheclassification does the classification.
     Input: the dataset on which to perform a leave-one-out crossvalidation with a classifier
     of choice.
@@ -448,55 +450,56 @@ def dotheclassification(ds,
     # first, get the labels according to the size of dataset. This is in principle
     # superflous (get_desired_labels() would exclude brain if it wasn't in the data),
     # but it'll make sure that a permitted ds_type was specified.
-    print('Plotting the confusion matrix')
-    if ds_type == 'full':
-        if bilateral:
-            desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
-            if 'FEF' in ds.sa.bilat_ROIs:
-                desired_order.append('FEF')
-        else:
-            desired_order = ['brain', 'VIS', 'left LOC', 'right LOC',
-                             'left OFA', 'right OFA', 'left FFA',
-                             'right FFA', 'left EBA', 'right EBA',
-                             'left PPA', 'right PPA']
-            if 'left FEF' in ds.sa.all_ROIs:
-                desired_order.extend(['right FEF', 'left FEF'])
-    if ds_type == 'stripped':
-        if bilateral:
-            desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
-            if 'FEF' in ds.sa.bilat_ROIs:
-                desired_order.append('FEF')
-        else:
-            desired_order = ['VIS', 'left LOC', 'right LOC',
-                             'left OFA', 'right OFA', 'left FFA',
-                             'right FFA', 'left EBA', 'right EBA',
-                             'left PPA', 'right PPA']
-            if 'left FEF' in ds.sa.all_ROIs:
-                desired_order.extend(['right FEF', 'left FEF'])
+    if plotting:
+        print('Plotting the confusion matrix')
+        if ds_type == 'full':
+            if bilateral:
+                desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+                if 'FEF' in ds.sa.bilat_ROIs:
+                    desired_order.append('FEF')
+            else:
+                desired_order = ['brain', 'VIS', 'left LOC', 'right LOC',
+                                 'left OFA', 'right OFA', 'left FFA',
+                                 'right FFA', 'left EBA', 'right EBA',
+                                 'left PPA', 'right PPA']
+                if 'left FEF' in ds.sa.all_ROIs:
+                    desired_order.extend(['right FEF', 'left FEF'])
+        if ds_type == 'stripped':
+            if bilateral:
+                desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+                if 'FEF' in ds.sa.bilat_ROIs:
+                    desired_order.append('FEF')
+            else:
+                desired_order = ['VIS', 'left LOC', 'right LOC',
+                                 'left OFA', 'right OFA', 'left FFA',
+                                 'right FFA', 'left EBA', 'right EBA',
+                                 'left PPA', 'right PPA']
+                if 'left FEF' in ds.sa.all_ROIs:
+                    desired_order.extend(['right FEF', 'left FEF'])
 
-    labels = get_known_labels(desired_order,
-                              cv.ca.stats.labels)
+        labels = get_known_labels(desired_order,
+                                  cv.ca.stats.labels)
 
-    # plot the confusion matrix with pymvpas build-in plot function currently fails
-    cv.ca.stats.plot(labels=labels,
-                     numbers=True,
-                     cmap='gist_heat_r')
-    plt.savefig(results_dir + 'CV_confusion_matrix.png')
-    plt.close()
-    if niceplot:
-        ACC = cv.ca.stats.stats['mean(ACC)']
-        # get a balanced accuracy estimation bc of unbalanced class frequencies
-        TPR = np.mean(cv.ca.stats.stats['TPR'])
-        PPV = np.mean(cv.ca.stats.stats['PPV'])
-        plot_confusion(cv,
-                       labels,
-                       fn=results_dir + 'CV_confusion_matrix.svg',
-                       figsize=(9, 9),
-                       vmax=100,
-                       cmap='Blues',
-                       ACC='%.2f' % ACC,
-                       TPR='%.2f' %TPR,
-                       PPV='%.2f' %PPV)
+        # plot the confusion matrix with pymvpas build-in plot function currently fails
+        cv.ca.stats.plot(labels=labels,
+                         numbers=True,
+                         cmap='gist_heat_r')
+        plt.savefig(results_dir + 'CV_confusion_matrix.png')
+        plt.close()
+        if niceplot:
+            ACC = cv.ca.stats.stats['mean(ACC)']
+            # get a balanced accuracy estimation bc of unbalanced class frequencies
+            TPR = np.mean(cv.ca.stats.stats['TPR'])
+            PPV = np.mean(cv.ca.stats.stats['PPV'])
+            plot_confusion(cv,
+                           labels,
+                           fn=results_dir + 'CV_confusion_matrix.svg',
+                           figsize=(9, 9),
+                           vmax=100,
+                           cmap='Blues',
+                           ACC='%.2f' % ACC,
+                           TPR='%.2f' %TPR,
+                           PPV='%.2f' %PPV)
     mv.h5save(results_dir + 'cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
     if store_sens:
