@@ -210,70 +210,127 @@ def plot_estimates(clf_estimates,
     # # TODO: aggregate this over all subjects!
 
 
-def plot_results(ds,
-                 estimates,
-                 analysis
+def plot_results(analysis,
+                 est_type,
+                 sub = 'sub-20',
+                 onlypos = True,
                  ):
     """
     We want to plot the classification decisions into a brain.
     Current target ROI: FFA.
     Idea: create a mask with 1 if the classifier identified the FFA,
     0 otherwise. Plot onto a brain.
+    This function has only been used interactively so far
+
+    Parameters:
+    -----------
+
+    analysis: 'avmovie' or 'localizer'
+    est_type: allROIs or FFAbrain (which estimates do we have?)
+    sub: string, which subject to use
+    onlypos: Boolean, whether positive values only should be plotted in GLM results
+
     """
-    # bilateralize and relabel the dataset
-    ds = bilateralize(ds)
-    if 'brain' in roi_pair:
-        keep_roi = [roi for roi in roi_pair if roi != 'brain']
-        if ds_type == 'stripped':
-            raise ValueError(
-                """You specified to compute a roi pair that contains the roi 'brain',
-                but you also stripped the dataset so that there is no 'brain' anymore.
-                Computer says no."""
-            )
-        if bilateral:
-            ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
-        else:
-            ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
-        print('Relabeled everything but {} to "brain".'.format(keep_roi))
-    print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
-
-    # get the classification results
-    sensitivities, cv, estimates = dotheclassification(ds,
-                                                       classifier,
-                                                       bilateral,
-                                                       ds_type,
-                                                       results_dir,
-                                                       plotting=False)
-    # create a mask from those voxels classified as FFA
-    # lets take the first subject as an example subject
-    s20_est = estimates[-1]['estimates']
-    s20_exp_est = np.exp(s20_est)
-    # FFA is index 0, brain is index 1 -- whats the classifiers decision?
-    winner = np.argmax(s20_exp_est, axis=1)
-    # copy the participants dataset, fill samples with classifier decisions as binary mask
-    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
-    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
-    # relabel FFA classifications into 1, and brain classificiations into 0,
-    # and put into a mask
-    ##winner_FFA = [0 if win == 1 else 1 for win in winner]
-    FFA_mask = winner == 0
-    results_ds.samples[FFA_mask, 0] = 1
-    # remap into a nifti image
-    result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
-                               data=results_ds.samples.T,
-                               sub=sub,
-                               )
-    # plot estimates with nilearn
+    # # if we need new data
+    # # bilateralize and relabel the dataset
+    # ds = bilateralize(ds)
+    # if 'brain' in roi_pair:
+    #     keep_roi = [roi for roi in roi_pair if roi != 'brain']
+    #     if ds_type == 'stripped':
+    #         raise ValueError(
+    #             """You specified to compute a roi pair that contains the roi 'brain',
+    #             but you also stripped the dataset so that there is no 'brain' anymore.
+    #             Computer says no."""
+    #         )
+    #     if bilateral:
+    #         ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
+    #     else:
+    #         ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
+    #     print('Relabeled everything but {} to "brain".'.format(keep_roi))
+    # print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
+    # sensitivities, cv, estimates = dotheclassification(ds,
+    #                                                    classifier,
+    #                                                    bilateral,
+    #                                                    ds_type,
+    #                                                    results_dir,
+    #                                                    plotting=False)
     from nilearn import plotting
-    brain = 'sourcedata/tnt/{}/bold3Tp2/in_grpbold3Tp2/head.nii.gz'.format(sub)
+    # background for plotting
+    brain = '/home/nastase/movieloc/figures/MNI152_T1_2009c_grpbold3Tp2.nii'
 
-    plotting.plot_glass_brain(result_map,
-                              cmap='seismic')
-    plotting.plot_stat_map(result_map,
-                           cmap='seismic',
-                           display_mode='z',
-                           cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
-                           bg_img=brain)
+    if analysis == 'avmovie':
+        # get the classification results
+        if est_type == 'allROIs':
+            estimates = mv.h5load('derivatives/plotting/avmovie_allrois_clfestimates_plotting.hdf5')
+        elif est_type == 'FFAbrain':
+            estimates = mv.h5load('derivatives/plotting/avmovie_FFAbrain_clfestimates_plotting.hdf5')
+        # get the hrf results
+        hrf_estimates = mv.h5load('derivatives/plotting/avmovie_hrfs.hdf5')
+        # get the dataset
+        ds = mv.h5load('derivatives/ds_groupspace/avmovie_groupdataset_transposed.hdf5')
+
+    elif analysis == 'localizer':
+        # get the classification results
+        if est_type == 'allROIs':
+            estimates = mv.h5load('derivatives/plotting/localizer_allrois_clfestimates_plotting.hdf5')
+        elif est_type == 'FFAbrain':
+            estimates = mv.h5load('derivatives/plotting/localizer_FFAbrain_clfestimates_plotting.hdf5')
+        # get the hrf results
+        hrf_estimates = mv.h5load('derivatives/plotting/localizer_hrfs.hdf5')
+        # get the dataset
+        ds = mv.h5load('derivatives/ds_groupspace/localizer_groupdataset_transposed.hdf5')
+
+
+    # lets start with the estimates: extract the classifiers decision, remap into a brain, plot
+    if sub == 'sub-20':
+        # we can just take the last estimates
+        # create a mask from those voxels classified as FFA
+        s20_est = estimates[-1]['estimates']
+        s20_exp_est = np.exp(s20_est)
+        # whats the classifiers decision, ie which index has the highest estimate?
+        winner = np.argmax(s20_exp_est, axis=1)
+        # copy the participants dataset, fill samples with classifier decisions as binary mask
+        results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
+        results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+        # relabel FFA classifications into 1, and other classificiations into 0,
+        if est_type == 'allROIs':
+            FFA_mask = winner == 1
+        elif est_type == 'FFAbrain':
+            FFA_mask = winner == 0
+        # all voxel classified as FFA get a 1
+        results_ds.samples[FFA_mask, 0] = 1
+        # remap into a nifti image
+        result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
+                                   data=results_ds.samples.T,
+                                   sub=sub,
+                                   )
+        # save the resulting nifti image
+        result_map.to_filename('derivatives/plotting/nifti_imgs/{}_{}_estimates_{}.nii.gz'.format(sub,
+                                                                                                  analysis,
+                                                                                                  est_type))
+    elif sub != 'sub-20':
+        # TODO
+
+    # plot estimates with nilearn
+    # plot a glass brain
+    display = plotting.plot_glass_brain(result_map,
+                                        cmap='seismic')
+    display.savefig('derivatives/plotting/figs/{}_{}_estimates_{}_glassbrain'.format(sub,
+                                                                                     analysis,
+                                                                                     est_type))
+    display.close()
+    # plot a statmap
+    display = plotting.plot_stat_map(result_map,
+                                     cmap='seismic',
+                                     display_mode='z',
+                                     cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                                     bg_img=brain)
+    display.savefig('derivatives/plotting/figs/{}_{}_estimates_{}_statmap'.format(sub,
+                                                                                  analysis,
+                                                                                  est_type))
+    display.close()
+
+    # now the results from HRFestimates
     # to plot betas from the second approach, we need to define contrasts.
     if analysis == 'localizer':
         # we're going for the original "strict" set
@@ -283,52 +340,84 @@ def plot_results(ds,
                                   'scene': -1,
                                   'object': -1,
                                   'scramble': -1}}
-        # get the hrf estimates
-        hrf_estimates = mv.h5load('derivatives/plotting/localizer_hrfs.hdf5')
 
     elif analysis == 'avmovie':
         # we'll make up a contrast
-        contrast = {'face-rest': {'face': 1,
-                                  'many_faces': 1}}
-                                  'location_Gump_House': -2}}
-        # get the hrf_estimates
-        hrf_estimates = mv.h5load('derivatives/plotting/avmovie_hrfs-hdf5')
+        ccontrast = {'face-rest': {'face': 1,
+                                   'many_faces': 1}}
+
+        # for an informed contrast, we use the hrf_estimates:
+        contrast = {'informed': {'face': 0.28,
+                                 'many_faces': 0.45,
+                                 'time-': 0.60,
+                                 'location_street_with_houses': 0.26,
+                                 "location_doctor's_office": 0.2,
+                                 'location_TV_studio': -0.30,
+                                 'location_fine_house': -0.24,
+                                 'location_flashback_highway': -0.22,
+                                 'time+': -0.19}}
 
     # extract contrast results
-    results = mv.get_contrasts(hrf_estimates,
-                               contrasts=contrast,
-                               condition_attr='condition')
+    for c, name in [(ccontrast, 'canonical'), (contrast, 'informed')]:
+        results = mv.get_contrasts(hrf_estimates,
+                                   contrasts=c,
+                                   condition_attr='condition')
 
-    # get them for subject 20 -- congruent to subject whose estimates we've plotted
-    ds = mv.h5load('derivatives/ds_groupspace/avmovie_groupdataset_transposed.hdf5')
+        results_ds = ds[ds.sa.participant == sub].copy('deep')
+        results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+        results_s20 = results.samples.T[results.fa.participant == sub]
+        # get only positive betas
+        if onlypos:
+            # only positive values
+            thresh_mask = results_s20 > 2.3
+        else:
+            thres_mask = abs(results_s20) > 2.3
+        thresh_mask = thresh_mask.flatten()
+        results_ds.samples[thresh_mask, 0] = 1
+        # for a non-binary map:
+        inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
+        results_s20[inverse] = 0
+        results_ds.samples = results_s20
 
-    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
-    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
-    results_s20 = results.samples.T[results.fa.participant == 'sub-20']
-    thresh_mask = abs(results_s20) > 2.3
-    thresh_mask = thresh_mask.flatten()
-    results_ds.samples[thresh_mask, 0] = 1
-    # for a non-binary map:
-    inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
-    results_s20[inverse]=0
-    results_ds.samples = results_s20
-   # [results_s20[i] else 0 for idx, i in enumerate(results_s20) if thresh_mask[i]==True]
+        # remap the results into a brain
+        result_map = buildremapper(ds_type = 'sull',
+                                   sub = sub,
+                                   data = results_ds.samples.T,
+                                   )
+        #save the nifti
+        result_map.to_filename('derivatives/plotting/nifti_imgs/{}_{}_{}-contrast.nii.gz'.format(sub,
+                                                                                                    analysis,
+                                                                                                    name,
+                                                                                                    ))
+        # plot the results
+        display = plotting.plot_glass_brain(result_map,
+                                            cmap='seismic',
+                                            plot_abs=False,
+                                            colorbar=True)
+        display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_glassbrain'.format(sub,
+                                                                                           analysis,
+                                                                                           name,
+                                                                                           ))
+        display.close()
+        # plot as statmap
+        display = plotting.plot_stat_map(result_map,
+                                         cmap='seismic',
+                                         display_mode='z',
+                                         cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                                         bg_img=brain)
+        display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap'.format(sub,
+                                                                                        analysis,
+                                                                                        name,
+                                                                                        ))
+        if sub == 'sub-20':
+            # overlay a ROI map of the FFA (this really only works for sub-20 right now:
+            lFFA = 'sub-20/ses-movie/anat/lFFA_2_mask_tmpl.nii.gz'
+            rFFA = 'sub-20/ses-movie/anat/rFFA_1_mask_tmpl.nii.gz'
+            display.add_contours(img=rFFA, colors='b')
+            display.add_contours(img=lFFA, colors='b')
 
+        display.close()
 
-    #results_s20 = results.samples.T[results.fa.participant == 'sub-20']
-
-    # threshold the resulting stats
-    #thresh_mask = results_s20 > 2.3
-    #thresh_mask = thresh_mask.flatten()
-    #thresh_results = np.zeros((results_s20.shape[0], 1))
-    #thresh_results[thresh_mask, 0] = 1
-
-    result_map = buildremapper(ds_type,
-                               sub,
-                               results_ds.samples.T,
-                               )
-
-        # TODO: plot with pos & neg above threshold values in glass brain
 
 
 def dotheclassification(ds,
