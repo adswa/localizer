@@ -100,6 +100,7 @@ def plot_estimates(clf_estimates,
     import matplotlib.pyplot as plt
     # find the order of sub in the estimates, and attach subject info
     subs, clf_estimates = findsub(ds, clf_estimates)
+    mv.h5save(results_dir + 'clf_estimates', clf_estimates)
 
     # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
     # an ROI in question (e.g. FFA), and collectively store those for later plotting.
@@ -209,6 +210,126 @@ def plot_estimates(clf_estimates,
     # # TODO: aggregate this over all subjects!
 
 
+def plot_results(ds,
+                 estimates,
+                 analysis
+                 ):
+    """
+    We want to plot the classification decisions into a brain.
+    Current target ROI: FFA.
+    Idea: create a mask with 1 if the classifier identified the FFA,
+    0 otherwise. Plot onto a brain.
+    """
+    # bilateralize and relabel the dataset
+    ds = bilateralize(ds)
+    if 'brain' in roi_pair:
+        keep_roi = [roi for roi in roi_pair if roi != 'brain']
+        if ds_type == 'stripped':
+            raise ValueError(
+                """You specified to compute a roi pair that contains the roi 'brain',
+                but you also stripped the dataset so that there is no 'brain' anymore.
+                Computer says no."""
+            )
+        if bilateral:
+            ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
+        else:
+            ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
+        print('Relabeled everything but {} to "brain".'.format(keep_roi))
+    print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
+
+    # get the classification results
+    sensitivities, cv, estimates = dotheclassification(ds,
+                                                       classifier,
+                                                       bilateral,
+                                                       ds_type,
+                                                       results_dir,
+                                                       plotting=False)
+    # create a mask from those voxels classified as FFA
+    # lets take the first subject as an example subject
+    s20_est = estimates[-1]['estimates']
+    s20_exp_est = np.exp(s20_est)
+    # FFA is index 0, brain is index 1 -- whats the classifiers decision?
+    winner = np.argmax(s20_exp_est, axis=1)
+    # copy the participants dataset, fill samples with classifier decisions as binary mask
+    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
+    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+    # relabel FFA classifications into 1, and brain classificiations into 0,
+    # and put into a mask
+    ##winner_FFA = [0 if win == 1 else 1 for win in winner]
+    FFA_mask = winner == 0
+    results_ds.samples[FFA_mask, 0] = 1
+    # remap into a nifti image
+    result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
+                               data=results_ds.samples.T,
+                               sub=sub,
+                               )
+    # plot estimates with nilearn
+    from nilearn import plotting
+    brain = 'sourcedata/tnt/{}/bold3Tp2/in_grpbold3Tp2/head.nii.gz'.format(sub)
+
+    plotting.plot_glass_brain(result_map,
+                              cmap='seismic')
+    plotting.plot_stat_map(result_map,
+                           cmap='seismic',
+                           display_mode='z',
+                           cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                           bg_img=brain)
+    # to plot betas from the second approach, we need to define contrasts.
+    if analysis == 'localizer':
+        # we're going for the original "strict" set
+        contrast = {'face-rest': {'face': 5,
+                                  'house': -1,
+                                  'body': -1,
+                                  'scene': -1,
+                                  'object': -1,
+                                  'scramble': -1}}
+        # get the hrf estimates
+        hrf_estimates = mv.h5load('derivatives/plotting/localizer_hrfs.hdf5')
+
+    elif analysis == 'avmovie':
+        # we'll make up a contrast
+        contrast = {'face-rest': {'face': 1,
+                                  'many_faces': 1}}
+                                  'location_Gump_House': -2}}
+        # get the hrf_estimates
+        hrf_estimates = mv.h5load('derivatives/plotting/avmovie_hrfs-hdf5')
+
+    # extract contrast results
+    results = mv.get_contrasts(hrf_estimates,
+                               contrasts=contrast,
+                               condition_attr='condition')
+
+    # get them for subject 20 -- congruent to subject whose estimates we've plotted
+    ds = mv.h5load('derivatives/ds_groupspace/avmovie_groupdataset_transposed.hdf5')
+
+    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
+    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+    results_s20 = results.samples.T[results.fa.participant == 'sub-20']
+    thresh_mask = abs(results_s20) > 2.3
+    thresh_mask = thresh_mask.flatten()
+    results_ds.samples[thresh_mask, 0] = 1
+    # for a non-binary map:
+    inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
+    results_s20[inverse]=0
+    results_ds.samples = results_s20
+   # [results_s20[i] else 0 for idx, i in enumerate(results_s20) if thresh_mask[i]==True]
+
+
+    #results_s20 = results.samples.T[results.fa.participant == 'sub-20']
+
+    # threshold the resulting stats
+    #thresh_mask = results_s20 > 2.3
+    #thresh_mask = thresh_mask.flatten()
+    #thresh_results = np.zeros((results_s20.shape[0], 1))
+    #thresh_results[thresh_mask, 0] = 1
+
+    result_map = buildremapper(ds_type,
+                               sub,
+                               results_ds.samples.T,
+                               )
+
+        # TODO: plot with pos & neg above threshold values in glass brain
+
 
 def dotheclassification(ds,
                         classifier,
@@ -217,7 +338,9 @@ def dotheclassification(ds,
                         results_dir,
                         store_sens=True,
                         niceplot=True,
-                        reverse=False):
+                        reverse=False,
+                        plotting=True,
+                        ):
     """ Dotheclassification does the classification.
     Input: the dataset on which to perform a leave-one-out crossvalidation with a classifier
     of choice.
@@ -327,55 +450,56 @@ def dotheclassification(ds,
     # first, get the labels according to the size of dataset. This is in principle
     # superflous (get_desired_labels() would exclude brain if it wasn't in the data),
     # but it'll make sure that a permitted ds_type was specified.
-    print('Plotting the confusion matrix')
-    if ds_type == 'full':
-        if bilateral:
-            desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
-            if 'FEF' in ds.sa.bilat_ROIs:
-                desired_order.append('FEF')
-        else:
-            desired_order = ['brain', 'VIS', 'left LOC', 'right LOC',
-                             'left OFA', 'right OFA', 'left FFA',
-                             'right FFA', 'left EBA', 'right EBA',
-                             'left PPA', 'right PPA']
-            if 'left FEF' in ds.sa.all_ROIs:
-                desired_order.extend(['right FEF', 'left FEF'])
-    if ds_type == 'stripped':
-        if bilateral:
-            desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
-            if 'FEF' in ds.sa.bilat_ROIs:
-                desired_order.append('FEF')
-        else:
-            desired_order = ['VIS', 'left LOC', 'right LOC',
-                             'left OFA', 'right OFA', 'left FFA',
-                             'right FFA', 'left EBA', 'right EBA',
-                             'left PPA', 'right PPA']
-            if 'left FEF' in ds.sa.all_ROIs:
-                desired_order.extend(['right FEF', 'left FEF'])
+    if plotting:
+        print('Plotting the confusion matrix')
+        if ds_type == 'full':
+            if bilateral:
+                desired_order = ['brain', 'VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+                if 'FEF' in ds.sa.bilat_ROIs:
+                    desired_order.append('FEF')
+            else:
+                desired_order = ['brain', 'VIS', 'left LOC', 'right LOC',
+                                 'left OFA', 'right OFA', 'left FFA',
+                                 'right FFA', 'left EBA', 'right EBA',
+                                 'left PPA', 'right PPA']
+                if 'left FEF' in ds.sa.all_ROIs:
+                    desired_order.extend(['right FEF', 'left FEF'])
+        if ds_type == 'stripped':
+            if bilateral:
+                desired_order = ['VIS', 'LOC', 'OFA', 'FFA', 'EBA', 'PPA']
+                if 'FEF' in ds.sa.bilat_ROIs:
+                    desired_order.append('FEF')
+            else:
+                desired_order = ['VIS', 'left LOC', 'right LOC',
+                                 'left OFA', 'right OFA', 'left FFA',
+                                 'right FFA', 'left EBA', 'right EBA',
+                                 'left PPA', 'right PPA']
+                if 'left FEF' in ds.sa.all_ROIs:
+                    desired_order.extend(['right FEF', 'left FEF'])
 
-    labels = get_known_labels(desired_order,
-                              cv.ca.stats.labels)
+        labels = get_known_labels(desired_order,
+                                  cv.ca.stats.labels)
 
-    # plot the confusion matrix with pymvpas build-in plot function currently fails
-    cv.ca.stats.plot(labels=labels,
-                     numbers=True,
-                     cmap='gist_heat_r')
-    plt.savefig(results_dir + 'CV_confusion_matrix.png')
-    plt.close()
-    if niceplot:
-        ACC = cv.ca.stats.stats['mean(ACC)']
-        # get a balanced accuracy estimation bc of unbalanced class frequencies
-        TPR = np.mean(cv.ca.stats.stats['TPR'])
-        PPV = np.mean(cv.ca.stats.stats['PPV'])
-        plot_confusion(cv,
-                       labels,
-                       fn=results_dir + 'CV_confusion_matrix.svg',
-                       figsize=(9, 9),
-                       vmax=100,
-                       cmap='Blues',
-                       ACC='%.2f' % ACC,
-                       TPR='%.2f' %TPR,
-                       PPV='%.2f' %PPV)
+        # plot the confusion matrix with pymvpas build-in plot function currently fails
+        cv.ca.stats.plot(labels=labels,
+                         numbers=True,
+                         cmap='gist_heat_r')
+        plt.savefig(results_dir + 'CV_confusion_matrix.png')
+        plt.close()
+        if niceplot:
+            ACC = cv.ca.stats.stats['mean(ACC)']
+            # get a balanced accuracy estimation bc of unbalanced class frequencies
+            TPR = np.mean(cv.ca.stats.stats['TPR'])
+            PPV = np.mean(cv.ca.stats.stats['PPV'])
+            plot_confusion(cv,
+                           labels,
+                           fn=results_dir + 'CV_confusion_matrix.svg',
+                           figsize=(9, 9),
+                           vmax=100,
+                           cmap='Blues',
+                           ACC='%.2f' % ACC,
+                           TPR='%.2f' %TPR,
+                           PPV='%.2f' %PPV)
     mv.h5save(results_dir + 'cv_classification_results.hdf5', results)
     print('Saved the crossvalidation results.')
     if store_sens:
