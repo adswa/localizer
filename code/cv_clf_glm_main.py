@@ -65,270 +65,291 @@ Command line specifications are as follows:
                on resulting betas
 """
 
-def plot_estimates(clf_estimates,
-                   hrf_estimates,
-                   hrf_estimates_transposed,
-                   ds,
-                   results_dir,
-                   #TODO: ROI='FFA',
-                   #TODO: regressor/contrast
-                   ):
-    """
-    clf_estimates = probability estimates derived during crossvalidation.
-         Is a list containing dictionaries (estimates, voxelindices, bilat ROIs)
-    hrf_estimates = GLM results from reversed analysis
-    hrf_estimates_transposed = transposed GLM results from reversed analysis
-    ds = dataset
-    ROI = ROI of choice, default is FFA. This ROIs voxel results (GLM and prob est) are
-            plotted.
-    regressor/contrast = what contrast or regressor to derive GLM results from
-    This function needs to be able to plot the classifiers estimates (clf.ca.estimates)
-    and the hrf_estimates from the reverse analysis in a scatterplot.
-    The situation is:
-    clf.ca.estimates contains the normalized probabilities from one (the test) subject,
-    with shape (voxel, number of ROIs). I assume what will be of interest are the estimates
-    from the ROI thats not the brain...
-    hrf_estimates_transposed has the betas for all voxels, for all regressors, with shape
-    (all voxels, conditions).
-    prolem 0: how to find out which participant was the left out one?
-    How to find out which index belongs to which ROI?
-    Problem 1: select the appropriate beta values (subset e.g. with
-    hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == 'sub-02'])
-    Problem 2: figure out what to do with regressors and ROIs... maybe in conjunction to
-    what we put into a brain plot...
-    """
-    import matplotlib.pyplot as plt
-    # find the order of sub in the estimates, and attach subject info
-    subs, clf_estimates = findsub(ds, clf_estimates)
-    mv.h5save(results_dir + 'clf_estimates', clf_estimates)
 
-    # loop through all participants hrf and estimate samples. Retrieve all samples belonging to
-    # an ROI in question (e.g. FFA), and collectively store those for later plotting.
-    # list with sequential correct/incorrect (FFA/brain) decision of the classifier
-    winners = []
-    # list with sequential maximum estimate per voxel
-    max_estimates = []
-    # list with sequential hrf estimates for a regressor of choice
-    hrfs = []
-    for sub in subs:
-        print(sub)
-        for i, est in enumerate(clf_estimates):
-            print(i)
-            if clf_estimates[i]['subject'] == sub:
-                print(i)
-                # get the voxel-label association in this participant
-                voxelind = ds[ds.sa.participant==sub].sa.voxel_indices
-                ROIs = ds[ds.sa.participant==sub].sa.bilat_ROIs
-                assoc = list(zip(ROIs, voxelind))
-                # get only the FFA voxel out of the estimates
-                FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
-                if FFA_vox == []: # TODO: make ROI a parameter
-                    # some subjects don't have FFA masks - we then need to break
-                    print("""
-                    During plotting, I could not find FFA masks for subject {}
-                    and hence I'm skipping it.""".format(sub))
-                    break
-                # only the indexes
-                FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
-                # if we exponentiate this (to get rid of the log):
-                exp_est = [np.exp(est['estimates'][i]) for i in FFA_ind]
-                max_est = [max(np.exp(est['estimates'][i])) for i in FFA_ind]
-                # get indices of "winners" -- highest estimate per array
-                winner = np.argmax(exp_est, axis=1)
-                # zip exponentiated estimates together with the index of the larger of the two
-                #est_win = list(zip(exp_est, winner))
-                # hrf_estimates has voxel index information, that means we could subset it as the estimates
-                # get the hrf_estimates from one regressor from left-out.subject:
-                hrf = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
-                face_hrf = hrf.samples[:, -12]  # where 2 indexes the regressor.. #TODO: make this index from a function (here: face)
-                FFA_face_hrfs = [face_hrf[i] for i in FFA_ind]
-
-                winners.extend(winner)
-                max_estimates.extend(max_est)
-                hrfs.extend(FFA_face_hrfs)
-    # list --> ndarray: to make np.where work
-    winners = np.asarray(winners)
-    assert len(winners) == len(max_estimates) == len(hrfs)
-    # now plot this - plot in red when estimates predicted FFA, in blue if brain
-    ##col = np.where(winners==0, 'r', np.where(winners==1, 'b', 'k'))
-    # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
-    ##x = [0 if win==0 else 0.5 for win in winners]
-    ##assert len(x) == len(col) == len(max_estimates)
-    # scatterplot is a bit lame -- violin plots contain more information.
-    ##plt.scatter(x, hrfs, c=col)
-
-    # we could also do that as a violin plot
-    print('Plotting the estimates...')
-    import pandas as pd
-    import seaborn as sns
-    fig, ax = plt.subplots()
-    x_cat = ['FFA' if win==0 else 'brain' for win in winners]
-    x_cat = pd.Series(x_cat)
-    sns.violinplot(x_cat,
-                   hrfs,
-                   order=['FFA', 'brain'],
-                   scale='count',   #this scales width to number of samples in bin
-                   )
-    ax.set_ylabel('Betas')
-    ax.set_xlabel('Classifier decision')
-    plt.title('Clf decision (from prob est from 1) and GLM results (2), FFA voxel')
-    plt.savefig(results_dir + 'violinplot_hrfs_clfdecision.svg')
-
-
-
-    # # get the voxel-label association in this participant
-    # voxelind = ds[ds.sa.participant=='sub-20'].sa.voxel_indices
-    # ROIs = ds[ds.sa.participant=='sub-20'].sa.bilat_ROIs
-    # assoc = list(zip(ROIs, voxelind))
-    #
-    # # get only the FFA voxel out of the estimates
-    # FFA_vox = [assoc[i] for i in range(len(assoc)) if assoc[i][0] != 'brain']
-    # # only the indexes
-    # FFA_ind = [i for i in range(len(assoc)) if assoc[i][0] != 'brain']
-    #
-    # #if we exponentiate this (to get rid of the log):
-    # exp_est = [np.exp(clf.ca.estimates[i]) for i in FFA_ind]
-    # max_est = [max(np.exp(clf.ca.estimates[i])) for i in FFA_ind]
-    # # get indices of "winners" -- highest estimate per array
-    # winner = np.argmax(exp_est, axis=1)
-    # # zip exponentiated estimates together with the index of the larger of the two
-    # est_win = list(zip(exp_est, winner))
-    #
-    # #hrf_estimates has voxel index information, that means we could subset it as the estimates
-    # #get the hrf_estimates from one regressor from left-out.subject:
-    # hrfs = hrf_estimates_transposed[hrf_estimates.fa.participant == sub]
-    # face_hrfs = hrfs.samples[:,2] # where 2 indexes the regressor (here: face)
-    # FFA_face_hrfs = [face_hrfs[i] for i in FFA_ind]
-    #
-    # fig, ax = plt.subplots()
-    # col = np.where(winner==0, 'r', np.where(winner==1, 'b', 'k'))
-    # plt.scatter(max_est, FFA_face_hrfs, c=col)
-    #
-    # # this plots a "correct" column in red and an "incorrect" column in blue if used instead of max_est
-    # x = [0 if win==0 else 0.5 for win in winner]
-    #
-    # # TODO: aggregate this over all subjects!
-
-
-def plot_results(ds,
-                 estimates,
-                 analysis
+def plot_results(analysis,
+                 est_type,
+                 sub = 'sub-20',
+                 onlypos = True,
                  ):
     """
-    We want to plot the classification decisions into a brain.
-    Current target ROI: FFA.
-    Idea: create a mask with 1 if the classifier identified the FFA,
-    0 otherwise. Plot onto a brain.
+    loads clf results (approach 1) and GLM results (approach 2), maps the results into a nifti image,
+    plots the results with nilearn.
+    Custom estimates and hrf files currently exist in "deratives/plotting" --  these results were computed
+    from a full dataset (incl. overlaps between ROIs).
+
+    Parameters:
+    -----------
+
+    analysis: 'avmovie' or 'localizer'
+    est_type: allROIs or FFAbrain (which estimates do we have?)
+    sub: string, which subject to use
+    onlypos: Boolean, whether positive values only should be plotted in GLM results
+
     """
-    # bilateralize and relabel the dataset
-    ds = bilateralize(ds)
-    if 'brain' in roi_pair:
-        keep_roi = [roi for roi in roi_pair if roi != 'brain']
-        if ds_type == 'stripped':
-            raise ValueError(
-                """You specified to compute a roi pair that contains the roi 'brain',
-                but you also stripped the dataset so that there is no 'brain' anymore.
-                Computer says no."""
-            )
-        if bilateral:
-            ds.sa.bilat_ROIs[ds.sa.bilat_ROIs != keep_roi[0]] = 'brain'
-        else:
-            ds.sa.all_ROIs[ds.sa.all_ROIs != keep_roi[0]] = 'brain'
-        print('Relabeled everything but {} to "brain".'.format(keep_roi))
-    print("If we're doing a GLM, this ROI pair is going to be used: {}".format(roi_pair))
-
-    # get the classification results
-    sensitivities, cv, estimates = dotheclassification(ds,
-                                                       classifier,
-                                                       bilateral,
-                                                       ds_type,
-                                                       results_dir,
-                                                       plotting=False)
-    # create a mask from those voxels classified as FFA
-    # lets take the first subject as an example subject
-    s20_est = estimates[-1]['estimates']
-    s20_exp_est = np.exp(s20_est)
-    # FFA is index 0, brain is index 1 -- whats the classifiers decision?
-    winner = np.argmax(s20_exp_est, axis=1)
-    # copy the participants dataset, fill samples with classifier decisions as binary mask
-    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
-    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
-    # relabel FFA classifications into 1, and brain classificiations into 0,
-    # and put into a mask
-    ##winner_FFA = [0 if win == 1 else 1 for win in winner]
-    FFA_mask = winner == 0
-    results_ds.samples[FFA_mask, 0] = 1
-    # remap into a nifti image
-    result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
-                               data=results_ds.samples.T,
-                               sub=sub,
-                               )
-    # plot estimates with nilearn
     from nilearn import plotting
-    brain = 'sourcedata/tnt/{}/bold3Tp2/in_grpbold3Tp2/head.nii.gz'.format(sub)
+    # background for plotting
+    brain = '/home/nastase/movieloc/figures/MNI152_T1_2009c_grpbold3Tp2.nii'
+    lFFA = 'sub-20/ses-movie/anat/lFFA_2_mask_tmpl.nii.gz'
+    rFFA = 'sub-20/ses-movie/anat/rFFA_1_mask_tmpl.nii.gz'
 
-    plotting.plot_glass_brain(result_map,
-                              cmap='seismic')
-    plotting.plot_stat_map(result_map,
-                           cmap='seismic',
-                           display_mode='z',
-                           cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
-                           bg_img=brain)
+    if analysis == 'avmovie':
+        print('loading data for avmovie results...')
+        # get the classification results
+        if est_type == 'allROIs':
+            print('.. estimates ...')
+            estimates = mv.h5load('derivatives/plotting/data/avmovie_allrois_clfestimates_plotting.hdf5')
+        elif est_type == 'FFAbrain':
+            print('.. estimates ...')
+            estimates = mv.h5load('derivatives/plotting/data/avmovie_FFAbrain_clfestimates_plotting.hdf5')
+        # get the hrf results
+        print('.. GLM results ...')
+        hrf_estimates = mv.h5load('derivatives/plotting/data/avmovie_hrfs.hdf5')
+        # get the dataset
+        print('.. the dataset ...')
+        ds = mv.h5load('derivatives/ds_groupspace/avmovie_groupdataset_transposed.hdf5')
+        print('... done.')
+
+    elif analysis == 'localizer':
+        print('loading data for localizer results...')
+        # get the classification results
+        if est_type == 'allROIs':
+            print('.. estimates ...')
+            estimates = mv.h5load('derivatives/plotting/data/localizer_allrois_clfestimates_plotting.hdf5')
+        elif est_type == 'FFAbrain':
+            print('.. estimates ...')
+            estimates = mv.h5load('derivatives/plotting/data/localizer_FFAbrain_clfestimates_fullplotting.hdf5')
+        # get the hrf results
+        print('.. GLM results ...')
+        hrf_estimates = mv.h5load('derivatives/plotting/data/localizer_hrfs.hdf5')
+        # get the dataset
+        print('.. the dataset ...')
+        ds = mv.h5load('derivatives/ds_groupspace/localizer_groupdataset_transposed.hdf5')
+        print('... done.')
+
+
+    # lets start with the estimates: extract the classifiers decision, remap into a brain, plot
+    if sub == 'sub-20':
+        # we can just take the last estimates
+        # create a mask from those voxels classified as FFA
+        print(
+            """Creating results for classifier decisions,
+            using extracting FFA results from {} specification... """.format(est_type))
+        s20_est = estimates[-1]['estimates']
+        s20_exp_est = np.exp(s20_est)
+        # whats the classifiers decision, ie which index has the highest estimate?
+        winner = np.argmax(s20_exp_est, axis=1)
+        # copy the participants dataset, fill samples with classifier decisions as binary mask
+        results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
+        results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+        # relabel FFA classifications into 1, and other classificiations into 0,
+        if est_type == 'allROIs':
+            FFA_mask = winner == 1
+        elif est_type == 'FFAbrain':
+            FFA_mask = winner == 0
+        # all voxel classified as FFA get a 1
+        results_ds.samples[FFA_mask, 0] = 1
+        # remap into a nifti image
+        result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
+                                   data=results_ds.samples.T,
+                                   sub=sub,
+                                   )
+        print('... saving results to nifti...')
+        # save the resulting nifti image
+        result_map.to_filename('derivatives/plotting/nifti_imgs/{}_{}_estimates_{}.nii.gz'.format(sub,
+                                                                                                  analysis,
+                                                                                                  est_type))
+    elif sub != 'sub-20':
+        # TODO
+        print('I do not work for subjects other than 20 yet :(')
+
+    # plot estimates with nilearn
+    # plot a glass brain
+    print('... plotting and saving resulting images with nilearn...')
+    display = plotting.plot_glass_brain(result_map,
+                                        cmap='seismic')
+    if sub == 'sub-20':
+        # overlay a ROI map of the FFA (this really only works for sub-20 right now:
+
+        display.add_contours(img=rFFA, colors='b')
+        display.add_contours(img=lFFA, colors='b')
+
+    display.savefig('derivatives/plotting/figs/{}_{}_estimates_{}_glassbrain'.format(sub,
+                                                                                     analysis,
+                                                                                     est_type))
+    display.close()
+    # plot a statmap
+    display = plotting.plot_stat_map(result_map,
+                                     cmap='seismic',
+                                     display_mode='z',
+                                     cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                                     bg_img=brain)
+    if sub == 'sub-20':
+        # overlay a ROI map of the FFA (this really only works for sub-20 right now:
+
+        display.add_contours(img=rFFA, colors='b')
+        display.add_contours(img=lFFA, colors='b')
+
+    display.savefig('derivatives/plotting/figs/{}_{}_estimates_{}_statmap'.format(sub,
+                                                                                  analysis,
+                                                                                  est_type))
+    display.close()
+    print('... done.')
+
+    # now the results from HRFestimates
     # to plot betas from the second approach, we need to define contrasts.
+    print("""
+        Loading contrasts and extracting GLM results for {} analysis...""".format(analysis))
     if analysis == 'localizer':
         # we're going for the original "strict" set
-        contrast = {'face-rest': {'face': 5,
+        ccontrast = {'face-rest': {'face': 5,
                                   'house': -1,
                                   'body': -1,
                                   'scene': -1,
                                   'object': -1,
                                   'scramble': -1}}
-        # get the hrf estimates
-        hrf_estimates = mv.h5load('derivatives/plotting/localizer_hrfs.hdf5')
+
+        contrast = {'face-rest': {'face': 1.6,
+                                  'house': -0.5,
+                                  'body': 1,
+                                  'scene': -1,
+                                  'object': 0.5,
+                                  'scramble': -0}}
+        for c, name in [(ccontrast, 'canonical'), (contrast, 'informed')]:
+            results = mv.get_contrasts(hrf_estimates,
+                                       contrasts=c,
+                                       condition_attr='condition')
+
+            results_ds = ds[ds.sa.participant == sub].copy('deep')
+            results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+            results_s20 = results.samples.T[results.fa.participant == sub]
+            # get only positive betas
+            if onlypos:
+                # only positive values
+                thresh_mask = results_s20 > 2.3
+            else:
+                thres_mask = abs(results_s20) > 2.3
+            thresh_mask = thresh_mask.flatten()
+            results_ds.samples[thresh_mask, 0] = 1
+            # for a non-binary map:
+            inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
+            results_s20[inverse] = 0
+            results_ds.samples = results_s20
+
+            # remap the results into a brain
+            result_map = buildremapper(ds_type='full',
+                                       sub=sub,
+                                       data=results_ds.samples.T,
+                                       )
+            # save the nifti
+            result_map.to_filename('derivatives/plotting/nifti_imgs/{}_{}_{}-contrast.nii.gz'.format(sub,
+                                                                                                            analysis,
+                                                                                                            name,
+                                                                                                            ))
+            # plot the results
+            display = plotting.plot_glass_brain(result_map,
+                                                cmap='seismic',
+                                                plot_abs=False,
+                                                colorbar=True)
+            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_glassbrain.svg'.format(sub,
+                                                                                            analysis,
+                                                                                            name,
+                                                                                            ))
+            display.close()
+            # plot as statmap
+            display = plotting.plot_stat_map(result_map,
+                                             cmap='seismic',
+                                             display_mode='z',
+                                             cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                                             bg_img=brain)
+            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap.svg'.format(sub,
+                                                                                         analysis,
+                                                                                         name,
+                                                                                         ))
+            if sub == 'sub-20':
+                # overlay a ROI map of the FFA (this really only works for sub-20 right now:
+
+                display.add_contours(img=rFFA, colors='b')
+                display.add_contours(img=lFFA, colors='b')
+
+            display.close()
 
     elif analysis == 'avmovie':
         # we'll make up a contrast
-        contrast = {'face-rest': {'face': 1,
-                                  'many_faces': 1}}
-                                  'location_Gump_House': -2}}
-        # get the hrf_estimates
-        hrf_estimates = mv.h5load('derivatives/plotting/avmovie_hrfs-hdf5')
+        ccontrast = {'face-rest': {'face': 1,
+                                   'many_faces': 1}}
 
-    # extract contrast results
-    results = mv.get_contrasts(hrf_estimates,
-                               contrasts=contrast,
-                               condition_attr='condition')
+        # for an informed contrast, we use the hrf_estimates:
+        contrast = {'informed': {'face': 0.28,
+                                 'many_faces': 0.45,
+                                 'time-': 0.60,
+                                 'location_street_with_houses': 0.26,
+                                 "location_doctor's_office": 0.2,
+                                 'location_TV_studio': -0.30,
+                                 'location_fine_house': -0.24,
+                                 'location_flashback_highway': -0.22,
+                                 'time+': -0.19}}
 
-    # get them for subject 20 -- congruent to subject whose estimates we've plotted
-    ds = mv.h5load('derivatives/ds_groupspace/avmovie_groupdataset_transposed.hdf5')
+        # extract contrast results
+        for c, name in [(ccontrast, 'canonical'), (contrast, 'informed')]:
+            results = mv.get_contrasts(hrf_estimates,
+                                       contrasts=c,
+                                       condition_attr='condition')
 
-    results_ds = ds[ds.sa.participant == 'sub-20'].copy('deep')
-    results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
-    results_s20 = results.samples.T[results.fa.participant == 'sub-20']
-    thresh_mask = abs(results_s20) > 2.3
-    thresh_mask = thresh_mask.flatten()
-    results_ds.samples[thresh_mask, 0] = 1
-    # for a non-binary map:
-    inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
-    results_s20[inverse]=0
-    results_ds.samples = results_s20
-   # [results_s20[i] else 0 for idx, i in enumerate(results_s20) if thresh_mask[i]==True]
+            results_ds = ds[ds.sa.participant == sub].copy('deep')
+            results_ds.samples = np.zeros((results_ds.samples.shape[0], 1))
+            results_s20 = results.samples.T[results.fa.participant == sub]
+            # get only positive betas
+            if onlypos:
+                # only positive values
+                thresh_mask = results_s20 > 2.3
+            else:
+                thres_mask = abs(results_s20) > 2.3
+            thresh_mask = thresh_mask.flatten()
+            results_ds.samples[thresh_mask, 0] = 1
+            # for a non-binary map:
+            inverse = [False if thresh_mask[i] == True else True for i, c in enumerate(thresh_mask)]
+            results_s20[inverse] = 0
+            results_ds.samples = results_s20
 
+            # remap the results into a brain
+            result_map = buildremapper(ds_type = 'full',
+                                       sub = sub,
+                                       data = results_ds.samples.T,
+                                       )
+            #save the nifti
+            result_map.to_filename('derivatives/plotting/nifti_imgs/{}_{}_{}-contrast.nii.gz'.format(sub,
+                                                                                                    analysis,
+                                                                                                    name,
+                                                                                                    ))
+            # plot the results
+            display = plotting.plot_glass_brain(result_map,
+                                                cmap='seismic',
+                                                plot_abs=False,
+                                                colorbar=True)
+            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_glassbrain.svg'.format(sub,
+                                                                                            analysis,
+                                                                                            name,
+                                                                                            ))
+            display.close()
+            # plot as statmap
+            display = plotting.plot_stat_map(result_map,
+                                             cmap='seismic',
+                                             display_mode='z',
+                                             cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
+                                             bg_img=brain)
+            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap.svg'.format(sub,
+                                                                                         analysis,
+                                                                                         name,
+                                                                                         ))
+            if sub == 'sub-20':
+                # overlay a ROI map of the FFA (this really only works for sub-20 right now:
+                lFFA = 'sub-20/ses-movie/anat/lFFA_2_mask_tmpl.nii.gz'
+                rFFA = 'sub-20/ses-movie/anat/rFFA_1_mask_tmpl.nii.gz'
+                display.add_contours(img=rFFA, colors='b')
+                display.add_contours(img=lFFA, colors='b')
 
-    #results_s20 = results.samples.T[results.fa.participant == 'sub-20']
+            display.close()
 
-    # threshold the resulting stats
-    #thresh_mask = results_s20 > 2.3
-    #thresh_mask = thresh_mask.flatten()
-    #thresh_results = np.zeros((results_s20.shape[0], 1))
-    #thresh_results[thresh_mask, 0] = 1
-
-    result_map = buildremapper(ds_type,
-                               sub,
-                               results_ds.samples.T,
-                               )
-
-        # TODO: plot with pos & neg above threshold values in glass brain
 
 
 def dotheclassification(ds,
@@ -694,6 +715,7 @@ def makeaplot_localizer(events,
                     linestyle='dotted',
                     )
             from matplotlib.lines import Line2D
+            # so far only added this manually, #TODO: find out how to plot two legends into the same plot
             custom_legend = [
                 Line2D([0], [0],
                        color='#ff7f2a',
@@ -948,93 +970,6 @@ def makeaplot_avmovie(events,
     return
 
 
-def project_betas(ds,
-                  analysis,
-                  eventdir,
-                  results_dir,
-                  annot_dir=None,
-                  ):
-    """
-    Project beta values from 2nd analysis approach into the brain.
-    Current problem: For first analysis type overlaps are excluded (for classification
-    purposes), so we need to do the glm on data with overlaps. Thats why its a separate function
-    and not integrated into the reversed analysis.
-    :return: nifti images... many nifti images in a dictionary
-
-    """
-
-    ds_transposed = ds.get_mapped(mv.TransposeMapper())
-    assert ds_transposed.shape[0] < ds_transposed.shape[1]
-
-    # get the appropriate event file. extract runs, chunks, timecoords from transposed dataset
-    chunks, runs, runonsets = False, False, False
-
-    if analysis == 'avmovie':
-        ds_transposed, chunks, runs, runonsets = get_avmovietimes(ds_transposed)
-
-    events_dicts = get_events(analysis=analysis,
-                              eventdir=eventdir,
-                              results_dir=results_dir,
-                              chunks=chunks,
-                              runs=runs,
-                              runonsets=runonsets,
-                              annot_dir=annot_dir,
-                              multimatch=False)
-
-    # step 1: do the glm on the data
-    hrf_estimates = mv.fit_event_hrf_model(ds_transposed,
-                                           events_dicts,
-                                           time_attr='time_coords',
-                                           condition_attr='condition',
-                                           design_kwargs=dict(drift_model='blank'),
-                                           glmfit_kwargs=dict(model='ols'),
-                                           return_model=True)
-
-    # lets save these
-    mv.h5save(results_dir + '/' + 'betas_from_2nd_approach.hdf5', hrf_estimates)
-    print('calculated the glm, saving results')
-
-    # step 2: get the results back into a transposed form, because we want to have time points as features & extract the betas
-    hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
-    assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
-
-    subs = np.unique(hrf_estimates_transposed.sa.participant)
-    print('going on to project resulting betas back into brain...')
-
-    regs = hrf_estimates_transposed.fa.condition
-    assert len(subs) > 0
-    from collections import OrderedDict
-    result_maps = OrderedDict()
-    for sub in subs:
-        print('...for subject {}...'.format(sub))
-        result_maps[sub] = OrderedDict()
-        # subset to participants dataframe
-        data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
-                          fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
-                          sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
-        # loop over regressors
-        for idx, reg in enumerate(regs):
-            result_map = buildremapper(sub,
-                                       data.samples.T[idx], # we select one beta vector per regressor
-                                       ds_type='full', # currently we can only do this for the full ds.
-                                       )
-            # populate a nested dict with the resulting nifti images
-            # this guy has one nifti image per regressor for each subject
-            result_maps[sub][reg] = result_map
-
-        # Those result maps can be quick-and-dirty-plotted with
-        # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
-        # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
-        # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
-        # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
-        # how do we know which regressors have highest betas for given ROI? averaging?
-        #from collections import OrderedDict
-        #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
-        # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
-
-    return result_maps
-
-
 def reverse_analysis(ds,
                      classifier,
                      bilateral,
@@ -1048,10 +983,8 @@ def reverse_analysis(ds,
                      normalize,
                      incl_regs=False,
                      store_sens=True,
-                     project_beta=False,
                      plot_tc=True,
                      can_contrast=None,
-                     plot_est=True,
                      ):
     """
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
@@ -1068,7 +1001,7 @@ def reverse_analysis(ds,
     # fit_event_hrf_model needs a non-transposed dataset
     ds_transposed = ds.get_mapped(mv.TransposeMapper())
     assert ds_transposed.shape[0] < ds_transposed.shape[1]
-    if plot_tc or plot_est:
+    if plot_tc:
         # if we're plotting, we need the original sensitvities and/or the estimates, and we
         # need to compute them before we append "overall/continuous" time coords to the ds for
         # the GLM (else plotting the time course fails due to a loss of the
@@ -1118,52 +1051,6 @@ def reverse_analysis(ds,
     # step 2: get the results back into a transposed form, because we want to have time points as features & extract the betas
     hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
     assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
-
-    # plot the HRF estimates together with the classifier decision
-    if plot_est:
-        plot_estimates(clf_estimates=estimates,
-                       hrf_estimates=hrf_estimates,
-                       hrf_estimates_transposed=hrf_estimates_transposed,
-                       ds=ds,
-                       results_dir=results_dir,
-                       )
-
-    # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
-    # the unsolved overlap issue...
-    project_beta = False
-    if project_beta:
-        print('going on to project resulting betas back into brain...')
-        subs = np.unique(hrf_estimates_transposed.sa.participant)
-        regs = hrf_estimates_transposed.fa.condition
-        assert len(subs) > 0
-        from collections import OrderedDict
-        result_maps = OrderedDict()
-        for sub in subs:
-            print('...for subject {}...'.format(sub))
-            result_maps[sub] = OrderedDict()
-            # subset to participants dataframe
-            data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
-                              fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
-                              sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
-            # loop over regressors
-            for idx, reg in enumerate(regs):
-                result_map = buildremapper(ds_type,
-                                           sub,
-                                           data.samples.T[idx], # we select one beta vector per regressor
-                                           )
-                # populate a nested dict with the resulting nifti images
-                # this guy has one nifti image per regressor for each subject
-                result_maps[sub][reg] = result_map
-
-        # Those result maps can be quick-and-dirty-plotted with
-        # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
-        # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
-        # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
-        # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
-        # how do we know which regressors have highest betas for given ROI? averaging?
-        #from collections import OrderedDict
-        #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
-        # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
 
     # step 3: do the classification on the betas. Store the
     # sensitivities but no chunks or time coord information

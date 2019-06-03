@@ -738,3 +738,129 @@ def findsub(ds,
                 order.append(sub)
                 est['subject'] = sub
     return order, estimates
+
+
+def project_betas(ds,
+                  analysis,
+                  eventdir,
+                  results_dir,
+                  annot_dir=None,
+                  ):
+    """
+    Currently unused, but can become relevant later on. Will keep it in utils.py.
+    Project beta values from 2nd analysis approach into the brain.
+    Current problem: For first analysis type overlaps are excluded (for classification
+    purposes), so we need to do the glm on data with overlaps. Thats why its a separate function
+    and not integrated into the reversed analysis.
+    :return: nifti images... many nifti images in a dictionary
+
+
+    # project beta estimates back into a brain. I'll save-guard this function for now, because there is still
+    # the unsolved overlap issue...
+    project_beta = False
+    if project_beta:
+        print('going on to project resulting betas back into brain...')
+        subs = np.unique(hrf_estimates_transposed.sa.participant)
+        regs = hrf_estimates_transposed.fa.condition
+        assert len(subs) > 0
+        from collections import OrderedDict
+        result_maps = OrderedDict()
+        for sub in subs:
+            print('...for subject {}...'.format(sub))
+            result_maps[sub] = OrderedDict()
+            # subset to participants dataframe
+            data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
+                              fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
+                              sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
+            # loop over regressors
+            for idx, reg in enumerate(regs):
+                result_map = buildremapper(ds_type,
+                                           sub,
+                                           data.samples.T[idx], # we select one beta vector per regressor
+                                           )
+                # populate a nested dict with the resulting nifti images
+                # this guy has one nifti image per regressor for each subject
+                result_maps[sub][reg] = result_map
+
+        # Those result maps can be quick-and-dirty-plotted with
+        # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
+        # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
+        # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
+        # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
+        # how do we know which regressors have highest betas for given ROI? averaging?
+        #from collections import OrderedDict
+        #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
+        # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
+
+    """
+
+    ds_transposed = ds.get_mapped(mv.TransposeMapper())
+    assert ds_transposed.shape[0] < ds_transposed.shape[1]
+
+    # get the appropriate event file. extract runs, chunks, timecoords from transposed dataset
+    chunks, runs, runonsets = False, False, False
+
+    if analysis == 'avmovie':
+        ds_transposed, chunks, runs, runonsets = get_avmovietimes(ds_transposed)
+
+    events_dicts = get_events(analysis=analysis,
+                              eventdir=eventdir,
+                              results_dir=results_dir,
+                              chunks=chunks,
+                              runs=runs,
+                              runonsets=runonsets,
+                              annot_dir=annot_dir,
+                              multimatch=False)
+
+    # step 1: do the glm on the data
+    hrf_estimates = mv.fit_event_hrf_model(ds_transposed,
+                                           events_dicts,
+                                           time_attr='time_coords',
+                                           condition_attr='condition',
+                                           design_kwargs=dict(drift_model='blank'),
+                                           glmfit_kwargs=dict(model='ols'),
+                                           return_model=True)
+
+    # lets save these
+    mv.h5save(results_dir + '/' + 'betas_from_2nd_approach.hdf5', hrf_estimates)
+    print('calculated the glm, saving results')
+
+    # step 2: get the results back into a transposed form, because we want to have time points as features & extract the betas
+    hrf_estimates_transposed = hrf_estimates.get_mapped(mv.TransposeMapper())
+    assert hrf_estimates_transposed.samples.shape[0] > hrf_estimates_transposed.samples.shape[1]
+
+    subs = np.unique(hrf_estimates_transposed.sa.participant)
+    print('going on to project resulting betas back into brain...')
+
+    regs = hrf_estimates_transposed.fa.condition
+    assert len(subs) > 0
+    from collections import OrderedDict
+    result_maps = OrderedDict()
+    for sub in subs:
+        print('...for subject {}...'.format(sub))
+        result_maps[sub] = OrderedDict()
+        # subset to participants dataframe
+        data = mv.Dataset(hrf_estimates_transposed.samples[hrf_estimates_transposed.sa.participant == sub],
+                          fa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].fa,
+                          sa=hrf_estimates_transposed[hrf_estimates_transposed.sa.participant == sub].sa)
+        # loop over regressors
+        for idx, reg in enumerate(regs):
+            result_map = buildremapper(sub,
+                                       data.samples.T[idx], # we select one beta vector per regressor
+                                       ds_type='full', # currently we can only do this for the full ds.
+                                       )
+            # populate a nested dict with the resulting nifti images
+            # this guy has one nifti image per regressor for each subject
+            result_maps[sub][reg] = result_map
+
+        # Those result maps can be quick-and-dirty-plotted with
+        # mri_args = {'background' : 'sourcedata/tnt/sub-01/bold3Tp2/in_grpbold3Tp2/head.nii.gz',
+        # 'background_mask': 'sub-01/ses-movie/anat/brain_mask_tmpl.nii.gz'}
+        # fig = mv.plot_lightbox(overlay=result_maps['sub-01']['scene'], vlim=(1.5, None), **mri_args)
+        # TODO: maybe save the result map? Done with map2nifti(ds, da).to_filename('blabla{}'.format(reg)
+        # how do we know which regressors have highest betas for given ROI? averaging?
+        #from collections import OrderedDict
+        #betas = [np.mean(hrf_estimates.samples[i][hrf_estimates.fa.bilat_ROIs == 'PPA']) for i, reg in enumerate(regs)]
+        # to get it sorted: OrderedDict(sorted(zip(regs, betas), key=lambda x:x[1]))
+
+    return result_maps
