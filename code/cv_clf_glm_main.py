@@ -114,7 +114,7 @@ def plot_results(analysis,
         # get the classification results
         if est_type == 'allROIs':
             print('.. estimates ...')
-            estimates = mv.h5load('derivatives/plotting/data/localizer_allrois_clfestimates_plotting.hdf5')
+            estimates = mv.h5load('derivatives/plotting/data/localizer_allrois_clfestimates_fullplotting.hdf5')
         elif est_type == 'FFAbrain':
             print('.. estimates ...')
             estimates = mv.h5load('derivatives/plotting/data/localizer_FFAbrain_clfestimates_fullplotting.hdf5')
@@ -147,7 +147,11 @@ def plot_results(analysis,
         elif est_type == 'FFAbrain':
             FFA_mask = winner == 0
         # all voxel classified as FFA get a 1
-        results_ds.samples[FFA_mask, 0] = 1
+        #results_ds.samples[FFA_mask, 0] = 1
+        # if not binary
+        #results_ds.samples = [exp_est[1] if FFA_mask[i] else 0 for (i, exp_est) in enumerate(s20_exp_est)]
+        ind = 0 if est_type == 'FFAbrain' else 1 # index of FFA given dataset
+        results_ds.samples = np.asarray([exp_est[ind] for exp_est in s20_exp_est])
         # remap into a nifti image
         result_map = buildremapper(ds_type='full', # currently we can only do this for the full ds.
                                    data=results_ds.samples.T,
@@ -200,21 +204,29 @@ def plot_results(analysis,
     print("""
         Loading contrasts and extracting GLM results for {} analysis...""".format(analysis))
     if analysis == 'localizer':
-        # we're going for the original "strict" set
+        # we're going for the original "strict" set from Sengupta et al., 2016
         ccontrast = {'face-rest': {'face': 5,
                                   'house': -1,
                                   'body': -1,
                                   'scene': -1,
                                   'object': -1,
                                   'scramble': -1}}
-
+        # contrast informed from first approach (hard coded so far -- sorry)
         contrast = {'face-rest': {'face': 1.6,
                                   'house': -0.5,
                                   'body': 1,
                                   'scene': -1,
                                   'object': 0.5,
                                   'scramble': -0}}
-        for c, name in [(ccontrast, 'canonical'), (contrast, 'informed')]:
+        # contrast informed from second approach (also hard coded -- sorry)
+        appr_no2 = {'face-rest': {'face': 8.6,
+                                  'house': 4,
+                                  'body': 5.5,
+                                  'scene': 2.5,
+                                  'object': 1.2,
+                                  'scramble': 0.5}}
+
+        for c, name in [(ccontrast, 'canonical'), (contrast, 'app1'), (appr_no2, 'app2')]:
             results = mv.get_contrasts(hrf_estimates,
                                        contrasts=c,
                                        condition_attr='condition')
@@ -261,10 +273,7 @@ def plot_results(analysis,
                                              display_mode='z',
                                              cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
                                              bg_img=brain)
-            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap.svg'.format(sub,
-                                                                                         analysis,
-                                                                                         name,
-                                                                                         ))
+
             if sub == 'sub-20':
                 # overlay a ROI map of the FFA (this really only works for sub-20 right now:
 
@@ -272,25 +281,49 @@ def plot_results(analysis,
                 display.add_contours(img=lFFA, colors='b')
 
             display.close()
+            display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap.svg'.format(sub,
+                                                                                             analysis,
+                                                                                             name,
+                                                                                             ))
 
     elif analysis == 'avmovie':
         # we'll make up a contrast
         ccontrast = {'face-rest': {'face': 1,
                                    'many_faces': 1}}
 
-        # for an informed contrast, we use the hrf_estimates:
+        # for an informed contrast from 1, we use the hrf_estimates:
         contrast = {'informed': {'face': 0.28,
                                  'many_faces': 0.45,
                                  'time-': 0.60,
                                  'location_street_with_houses': 0.26,
                                  "location_doctor's_office": 0.2,
+                                 'location_truck_stop': 0.1872324418178486,
+                                 'location_red_light_district': 0.16500102729310628,
+                                 'location_rain-swept_camp': 0.1453228621215315,
+                                 "location_Dan's_apartment": 0.11440383109225225,
                                  'location_TV_studio': -0.30,
                                  'location_fine_house': -0.24,
                                  'location_flashback_highway': -0.22,
-                                 'time+': -0.19}}
-
+                                 'time+': -0.19,
+                                 'location_college_graduation': -0.18706268865187126,
+                                 'location_bridge_near_club': -0.18258174696939508,
+                                 'location_park_with_playground': -0.17878824480943983,
+                                 'location_beacon': -0.17855416540675068,
+                                 "location_Jenny's_grandma's_trailer": -0.1659242705875166,
+                                 'location_school': -0.1657919651632999
+                                 }}
+        # approach 2 informed, using resulting sensitivities
+        appr_no2 = {'informed': {'location_main_street': 0.7823921132465959,
+                                 'scene-change': 0.9362323567548071,
+                                 'exterior': 1.9195965220134588,
+                                 'many_faces': 4.238853034362913,
+                                 'face': 5.065997907951953,
+                                 'location_tree_on_a_field': -1.5989254490278784,
+                                 'location_barracks': -1.3952645373621548,
+                                 'location_White_House': -1.2994853287739778,
+                                  }}
         # extract contrast results
-        for c, name in [(ccontrast, 'canonical'), (contrast, 'informed')]:
+        for c, name in [(ccontrast, 'canonical'), (contrast, 'app1'), (appr_no2, 'app2')]:
             results = mv.get_contrasts(hrf_estimates,
                                        contrasts=c,
                                        condition_attr='condition')
@@ -337,17 +370,15 @@ def plot_results(analysis,
                                              display_mode='z',
                                              cut_coords=[-20, -19, -18, -17, -16, -15, -14, -13, -12, -11],
                                              bg_img=brain)
+            if sub == 'sub-20':
+
+                display.add_contours(img=rFFA, colors='b')
+                display.add_contours(img=lFFA, colors='b')
+
             display.savefig('derivatives/plotting/figs/{}_{}_{}-contrast_statmap.svg'.format(sub,
                                                                                          analysis,
                                                                                          name,
                                                                                          ))
-            if sub == 'sub-20':
-                # overlay a ROI map of the FFA (this really only works for sub-20 right now:
-                lFFA = 'sub-20/ses-movie/anat/lFFA_2_mask_tmpl.nii.gz'
-                rFFA = 'sub-20/ses-movie/anat/rFFA_1_mask_tmpl.nii.gz'
-                display.add_contours(img=rFFA, colors='b')
-                display.add_contours(img=lFFA, colors='b')
-
             display.close()
 
 
