@@ -1021,8 +1021,6 @@ def reverse_analysis(ds,
     This reverses the analysis. We first do a glm on the data, and subsequently do a classification
     on the resulting beta coefficients.
     In order to plot, we have to all the original analyses again, unfortunately.
-    There is also a function to plot the resulting beta coefficients back into the brain. Currently,
-    this only works for non-stripped datasets, so its at the moment disabled.
     ds: dataset (the transposed group dataset)
     events_dicts: dictionary of events
     can_contrast: dictionary of regressors (exact names please) and a weight -- this is how to
@@ -1104,7 +1102,7 @@ def reverse_analysis(ds,
     ms = [s[0] for i, s in enumerate(mean_sens_transposed.samples)]
     ms = np.asarray(ms)
     # that should be the l2 norm, multiplied by length of the vector
-    normed_sens = ((ms)/np.sqrt(np.sum(ms**2))) * len(ms)
+    normed_sens = (ms / np.sqrt(np.sum(ms ** 2))) * len(ms)
 
     # mean_sens_transposed now has (70, 15) shaped samples, the regressors, and the ROIs.
     # I should be able to extract the index of the ROI pair in question
@@ -1585,7 +1583,7 @@ def main():
                                                            store_sens=store_sens,
                                                            niceplot=niceplot,
                                                            )
-        if (glm) and (analysis == 'avmovie'):
+        if glm and (analysis == 'avmovie'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
                                      classifier=classifier,
@@ -1610,7 +1608,7 @@ def main():
                                   fn=results_dir,
                                   include_all_regressors=incl_regs,
                                   multimatch_only=False)
-        elif (glm) and (analysis == 'localizer'):
+        elif glm and (analysis == 'localizer'):
             hrf_estimates = dotheglm(sensitivities,
                                      normalize=normalize,
                                      analysis=analysis,
